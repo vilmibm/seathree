@@ -22,18 +22,27 @@ def get_twitter_auth():
            secrets['USER_AUTH']['oauth_token_secret']
 
 class TranslationStreamer(TwythonStreamer):
+    def __init__(**kwargs, *args):
+        self.dry_run = kwargs.get('dry_run', False)
+        super(TwythonStreamer, self).__init__(*args)
+
     def set_twitter_client(self, client):
         self.twitter_client = client
 
     def set_google_client(self, client):
         self.google_client = client
+
     def translate(text, from="es", to="en"):
+        if self.dry_run:
+            return "<translated tweet>"
         return self.google_client.translations().list(source=from, target=to, q=text).execute()
 
     def is_original_tweet(self, data):
-        """Given some data from the streaming API, determine if it is an
+        """
+        Given some data from the streaming API, determine if it is an
         original tweet from one of the authed account's
-        followings. Returns True or False"""
+        followings. Returns True or False
+        """
         # Favorites do not come through. Non-tweets lack a text property,
         # it seems (ie new followings).
         if 'text' not in data:
@@ -67,7 +76,8 @@ class TranslationStreamer(TwythonStreamer):
 
         (these will be later reconstructed).
 
-        Returns a string and a mapping of sigil to yes
+        Returns a string and a listing of symbols that were replaced
+        with sigils.
         """
         symbol_re = re.compile('(\@\w+|http:\/\/\w+|\#\w+)')
         symbols = re.findall(raw_text)
@@ -93,8 +103,10 @@ class TranslationStreamer(TwythonStreamer):
         text = details['translated_text']
         screen_name = details['user']['screen_name']
         tweet_tmpl = "%s: %s"
+        if self.dry_run:
+            print tweet_tmpl % (screen_name, text)
+            return
         # TODO actually tweet
-        print tweet_tmpl % (screen_name, text)
 
     def listen():
         self.user(**{'with':'following'})
@@ -116,7 +128,7 @@ class TranslationStreamer(TwythonStreamer):
 
 if __name__ == '__main__':
     twitter_client = Twython(*get_twitter_auth())
-    home_stream = TranslationStreamer(*get_twitter_auth())
+    home_stream = TranslationStreamer(**{'dry_run':True}, *get_twitter_auth())
     home_stream.set_client(twitter_client)
     home_stream.set_google_client(get_google_client())
 
