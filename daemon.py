@@ -4,7 +4,7 @@ import re
 from twython import Twython, TwythonStreamer
 from apiclient.discovery import build # Google's poorly named thing
 
-SECRETS_FILE = 'auth.json'
+SECRETS_FILE = 'secrets.json'
 
 def get_secrets():
     return json.loads(open(SECRETS_FILE).read())
