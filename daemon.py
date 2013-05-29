@@ -22,9 +22,7 @@ def get_twitter_auth():
            secrets['USER_AUTH']['oauth_token_secret']
 
 class TranslationStreamer(TwythonStreamer):
-    def __init__(**kwargs, *args):
-        self.dry_run = kwargs.get('dry_run', False)
-        super(TwythonStreamer, self).__init__(*args)
+    dry_run = False
 
     def set_twitter_client(self, client):
         self.twitter_client = client
@@ -32,10 +30,10 @@ class TranslationStreamer(TwythonStreamer):
     def set_google_client(self, client):
         self.google_client = client
 
-    def translate(text, from="es", to="en"):
+    def translate(text, source="es", target="en"):
         if self.dry_run:
             return "<translated tweet>"
-        return self.google_client.translations().list(source=from, target=to, q=text).execute()
+        return self.google_client.translations().list(source=source, target=target, q=text).execute()
 
     def is_original_tweet(self, data):
         """
@@ -102,17 +100,31 @@ class TranslationStreamer(TwythonStreamer):
     def tweet(self, details):
         text = details['translated_text']
         screen_name = details['user']['screen_name']
-        tweet_tmpl = "%s: %s"
-        if self.dry_run:
-            print tweet_tmpl % (screen_name, text)
+        naive_tweet = "@{screen_name}: {text}".format(screen_name=screen_name, text=text)
+        if len(naive_tweet) <= 140:
+            if self.dry_run:
+                print naive_tweet
             return
-        # TODO actually tweet
+        # Split by word boundaries and add three ellipses at the end of all but last one
+        words = naive_tweet.split(' ')
+        tweets = []
+        current_tweet = ''
+        while len(words) > 0:
+            if len(current_tweet+words[0]) < 137:
+                current_tweet += words.pop(0)
+            else:
+                current_tweet += '...'
+                tweets.append(current_tweet) # makes a copy of current_tweet
+                current_tweet = ''
 
-    def listen():
+        if self.dry_run:
+            print tweets
+
+    def listen(self):
         self.user(**{'with':'following'})
 
     def on_success(self, data):
-        if not is_original_tweet(data):
+        if not self.is_original_tweet(data):
             return
         details = self.extract_details(data)
         raw_text = details['text']
@@ -127,10 +139,14 @@ class TranslationStreamer(TwythonStreamer):
 
 
 if __name__ == '__main__':
+    home_stream = TranslationStreamer(*get_twitter_auth())
+    home_stream.dry_run = True
+
+    print "Connecting twitter client"
     twitter_client = Twython(*get_twitter_auth())
-    home_stream = TranslationStreamer(**{'dry_run':True}, *get_twitter_auth())
-    home_stream.set_client(twitter_client)
+    home_stream.set_twitter_client(twitter_client)
+    print "Connecting Google client"
     home_stream.set_google_client(get_google_client())
 
+    print "Listening to twitter"
     home_stream.listen()
-
