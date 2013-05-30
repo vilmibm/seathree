@@ -28,7 +28,7 @@ class TranslationStreamer(TwythonStreamer):
     def set_google_client(self, client):
         self.google_client = client
 
-    def translate(text, source="es", target="en"):
+    def translate(self, text, source="es", target="en"):
         return self.google_client.translations().list(source=source, target=target, q=text).execute()
 
     def is_original_tweet(self, data):
@@ -123,8 +123,8 @@ class TranslationStreamer(TwythonStreamer):
         details = self.extract_details(data)
         raw_text = details['text']
         marked_text, symbols = self.mark_sigils(raw_text)
-        english_text = self.translate(marked_text)
-        details['translated_text'] = self.restore_sigils(marked_text, symbols)
+        marked_english_text = self.translate(marked_text)
+        details['translated_text'] = self.restore_sigils(marked_english_text, symbols)
 
         self.tweet(details)
 

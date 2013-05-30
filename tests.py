@@ -9,7 +9,7 @@ class TestTweetAuthoring(TestCase):
         self.streamer = daemon.TranslationStreamer(*daemon.get_twitter_auth())
         self.mock_tc = Mock()
         self.streamer.set_twitter_client(self.mock_tc)
-        
+
     def test_one_tweet(self):
         details = {
             'user': {
@@ -105,3 +105,37 @@ class TestOnSuccess(TestCase):
         self.streamer.on_success(data)
         self.assertEqual(self.mock_tc.update_status.call_count, 0)
         self.assertEqual(self.mock_gc.translations.call_count, 0)
+
+    def test_a_tweet(self):
+        data = {
+            'user': {
+                'screen_name': 'foo',
+            },
+            'text': 'bar @someone #awesome http://www.foobarbaz.quux'
+        }
+        self.mock_gc.translations().list().execute.return_value = 'quux xz0 xz1 xz2'
+        self.mock_gc.translations.reset_mock()
+
+        self.streamer.on_success(data)
+
+        self.assertEqual(self.mock_gc.translations.call_count, 1)
+        self.mock_tc.update_status.assert_called_once_with('@foo: quux @someone #awesome http://www.foobarbaz.quux')
+
+    def test_n_tweets(self):
+        data = {
+            'user': {
+                'screen_name': 'foo',
+            },
+            'text': 'Once upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'
+        }
+        self.mock_gc.translations().list().execute.return_value = 'Thrice upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'
+        self.mock_gc.translations.reset_mock()
+
+        self.streamer.on_success(data)
+
+        self.assertEqual(self.mock_gc.translations.call_count, 1)
+        calls = [
+            mock.call.update_status('@foo: Thrice upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and...'),
+            mock.call.update_status('intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups'),
+        ]
+        self.mock_tc.assert_has_calls(calls)
