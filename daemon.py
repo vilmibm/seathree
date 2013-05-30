@@ -55,6 +55,9 @@ class TranslationStreamer(TwythonStreamer):
         # it seems (ie new followings).
         if 'text' not in data:
             return False
+        if data['user']['screen_name'].lower() == 'translatething':
+            # TODO don't hardocde screen_name here, pull it from the secrets.json
+            return False
         if 'retweeted_status' in data:
             return False
         return True
