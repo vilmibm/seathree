@@ -1,8 +1,10 @@
+import httplib
 import json
 import re
 
 from twython import Twython, TwythonStreamer
-from apiclient.discovery import build # Google's poorly named thing. It cannot be installed into a virtualenv; be warned.
+# Google's poorly named thing. It cannot be installed into a virtualenv; be warned.
+from apiclient.discovery import build
 
 SECRETS_FILE = 'secrets.json'
 
@@ -34,8 +36,14 @@ class TranslationStreamer(TwythonStreamer):
         and sometimes fails. Returns `text` in language `source`
         translated into language `target`.
         """
-        # TODO this fails with BadStatus sometimes. It tends to work upon retry. Write retry code.
-        return self.google_client.translations().list(source=source, target=target, q=text).execute()
+        retries = 3
+        _translate = lambda q,s,t: self.google_client.translations().list(source=s, target=t, q=q).execute()['translations'][0]['translatedText']
+        while retries > 0:
+            try:
+                return _translate(text, source, target)
+            except httplib.BadStatusLine:
+                retries -= 1
+        return None
 
     def is_original_tweet(self, data):
         """
@@ -123,7 +131,7 @@ class TranslationStreamer(TwythonStreamer):
         screen_name = details['user']['screen_name']
         naive_tweet = "@{screen_name}: {text}".format(screen_name=screen_name, text=text)
         if len(naive_tweet) <= 140:
-            return self.twitter_client.update_status(naive_tweet)
+            return self.twitter_client.update_status(status=naive_tweet)
         # Split by word boundaries and add three ellipses at the end of all but last one
         words = naive_tweet.split(' ')
         tweets = []
@@ -139,7 +147,7 @@ class TranslationStreamer(TwythonStreamer):
         for tweet in tweets:
             # TODO could a tight loop cause rate-limit issues? Might
             # want to sleep here.
-            self.twitter_client.update_status(tweet)
+            self.twitter_client.update_status(status=tweet)
 
     def listen(self):
         """ Start listening to the Twitter home timeline. """
@@ -153,13 +161,22 @@ class TranslationStreamer(TwythonStreamer):
         """
         # TODO spawn a thread to do this. Google hangs for so long
         # we'll get a huge backlog of tweets.
+        print "Twitter event: "
+        print "\t", data
         if not self.is_original_tweet(data):
+            print "Event not a tweet, discarding"
             return
         details = self.extract_details(data)
         raw_text = details['text']
+        print "Going to mark: %s" % raw_text
         marked_text, symbols = self.mark_sigils(raw_text)
+        print "Going to translate: %s" % marked_text
         marked_english_text = self.translate(marked_text)
+        if marked_english_text is None:
+            print "*** Google was not reachable ***"
+            return
         details['translated_text'] = self.restore_sigils(marked_english_text, symbols)
+        print "Going to tweet: %s" % details['translated_text']
 
         self.tweet(details)
 
