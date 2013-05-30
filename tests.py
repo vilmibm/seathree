@@ -62,3 +62,46 @@ class TestDetectOriginalTweet(TestCase):
         }
         self.assertTrue(self.streamer.is_original_tweet(data))
 
+
+class TestSigils(TestCase):
+    def setUp(self):
+        self.streamer = daemon.TranslationStreamer(*daemon.get_twitter_auth())
+
+    def testMarkSigils(self):
+        tweet = "@so_and_so look at this link http://some.link.com #awesome isn't it cool?"
+        expected_text = "xz0 look at this link xz1 xz2 isn't it cool?"
+        expected_replaced = [
+            "@so_and_so",
+            "http://some.link.com",
+            "#awesome",
+        ]
+        marked_text, replaced = self.streamer.mark_sigils(tweet)
+        self.assertEqual(marked_text, expected_text)
+        self.assertEqual(replaced, expected_replaced)
+
+    def test_restore_sigils(self):
+        marked_text = "xz0 look at this link xz1 xz2 isn't it cool?"
+        replaced = [
+            "@so_and_so",
+            "http://some.link.com",
+            "#awesome",
+        ]
+        expected_restored = "@so_and_so look at this link http://some.link.com #awesome isn't it cool?"
+        restored_text = self.streamer.restore_sigils(marked_text, replaced)
+        self.assertEqual(restored_text, expected_restored)
+
+class TestOnSuccess(TestCase):
+    def setUp(self):
+        self.streamer = daemon.TranslationStreamer(*daemon.get_twitter_auth())
+        self.mock_tc = Mock()
+        self.mock_gc = Mock()
+        self.streamer.set_twitter_client(self.mock_tc)
+        self.streamer.set_google_client(self.mock_gc)
+
+    def test_not_a_tweet(self):
+        data = {
+            'some':'thing'
+        }
+        self.streamer.on_success(data)
+        self.assertEqual(self.mock_tc.update_status.call_count, 0)
+        self.assertEqual(self.mock_gc.translations.call_count, 0)

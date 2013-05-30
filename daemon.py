@@ -56,7 +56,7 @@ class TranslationStreamer(TwythonStreamer):
         }
 
     def mksigil(self, c):
-        return 'x%d' % c
+        return 'xz%d' % c
 
     def mark_sigils(self, raw_text):
         """Replace special forms within a tweet with ordered sigils so
@@ -73,13 +73,13 @@ class TranslationStreamer(TwythonStreamer):
         Returns a string and a listing of symbols that were replaced
         with sigils.
         """
-        symbol_re = re.compile('(\@\w+|http:\/\/\w+|\#\w+)')
-        symbols = re.findall(raw_text)
+        symbol_re = re.compile('(\@\w+|http:\/\/[^ ]+|\#\w+)')
+        symbols = re.findall(symbol_re, raw_text)
 
         counter = 0
         marked_text = raw_text
         for symbol in symbols:
-            marked_text = raw_text.replace(symbol, mksigil(counter))
+            marked_text = marked_text.replace(symbol, self.mksigil(counter))
             counter += 1
 
         return marked_text, symbols
@@ -88,8 +88,8 @@ class TranslationStreamer(TwythonStreamer):
         counter = 0
         unmarked_text = marked_text
         for symbol in symbols:
-            sigil = mksigil(counter)
-            unmarked_text.replace(sigil, symbol)
+            unmarked_text = unmarked_text.replace(self.mksigil(counter), symbol)
+            counter += 1
 
         return unmarked_text
 
