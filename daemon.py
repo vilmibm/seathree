@@ -81,7 +81,7 @@ class TranslationStreamer(TwythonStreamer):
 
         Takes an int, returns a string like `xz0`.
         """
-        return 'xz%d' % c
+        return 'XZ%d' % c
 
     def mark_sigils(self, raw_text):
         """
