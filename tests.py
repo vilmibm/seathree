@@ -1,5 +1,6 @@
 import mock
 from mock import Mock
+
 from unittest2 import TestCase
 
 import daemon
@@ -32,6 +33,21 @@ class TestTweetAuthoring(TestCase):
         calls = [
             mock.call.update_status(status='@foo: Once upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and...'),
             mock.call.update_status(status='intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups'),
+        ]
+        self.mock_tc.assert_has_calls(calls)
+
+    def test_short_second(self):
+        details = {
+            'user': {
+                'screen_name': 'nate_smith',
+            },
+            'translated_text': 'the universe, with its elegant endowment of shelves, of inexhaustible stairways for the traveler and latrines can only be the work of a god.'
+        }
+        self.streamer.tweet(details)
+        self.assertEqual(self.mock_tc.update_status.call_count, 2)
+        calls = [
+            mock.call.update_status(status='@nate_smith: the universe, with its elegant endowment of shelves, of inexhaustible stairways for the traveler and latrines can only be...'),
+            mock.call.update_status(status='the work of a god.'),
         ]
         self.mock_tc.assert_has_calls(calls)
 

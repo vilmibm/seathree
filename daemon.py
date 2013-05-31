@@ -134,8 +134,10 @@ class TranslationStreamer(TwythonStreamer):
         screen_name = details['user']['screen_name']
         naive_tweet = "@{screen_name}: {text}".format(screen_name=screen_name, text=text)
         if len(naive_tweet) <= 140:
+            print "Prepared tweet: %s" % naive_tweet
             return self.twitter_client.update_status(status=naive_tweet)
         # Split by word boundaries and add three ellipses at the end of all but last one
+
         words = naive_tweet.split(' ')
         tweets = []
         current_tweet = ''
@@ -146,10 +148,11 @@ class TranslationStreamer(TwythonStreamer):
                 current_tweet = current_tweet[:-1] + '...' # shave off space
                 tweets.append(current_tweet) # makes a copy of current_tweet
                 current_tweet = ''
+        if current_tweet != '':
+            tweets.append(current_tweet)
         tweets[len(tweets)-1] = tweets[len(tweets)-1][:-3] # shave off final ellipsis
+        print "Prepared tweets: %s" % tweets
         for tweet in tweets:
-            # TODO could a tight loop cause rate-limit issues? Might
-            # want to sleep here.
             self.twitter_client.update_status(status=tweet)
 
     def listen(self):
@@ -195,12 +198,19 @@ class TranslationStreamer(TwythonStreamer):
 if __name__ == '__main__':
     home_stream = TranslationStreamer(*get_twitter_auth())
 
-    print "Connecting twitter client"
+    print "Connecting Twitter client"
     twitter_client = Twython(*get_twitter_auth())
     home_stream.set_twitter_client(twitter_client)
 
     print "Connecting Google client"
     home_stream.set_google_client(get_google_client())
 
-    print "Listening to twitter"
-    home_stream.listen()
+    def listen():
+        try:
+            print "Running listener..."
+            home_stream.listen()
+        except Exception, e:
+            print "Saw exception: %s" % e
+            print "Restarting listener"
+            listen()
+    listen()
