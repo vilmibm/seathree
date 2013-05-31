@@ -41,6 +41,9 @@ class TestDetectOriginalTweet(TestCase):
         self.streamer = daemon.TranslationStreamer(*daemon.get_twitter_auth())
     def test_retweet(self):
         data = {
+            'user': {
+                'screen_name': 'foo'
+            },
             'retweeted_status':{'stuff':'things'},
             'text': 'some retweet'
         }
@@ -113,7 +116,9 @@ class TestOnSuccess(TestCase):
             },
             'text': 'bar @someone #awesome http://www.foobarbaz.quux'
         }
-        self.mock_gc.translations().list().execute.return_value = 'quux xz0 xz1 xz2'
+        self.mock_gc.translations().list().execute.return_value = {
+            'translations': [{'translatedText':'quux xz0 xz1 xz2'}]
+        }
         self.mock_gc.translations.reset_mock()
 
         self.streamer.on_success(data)
@@ -128,7 +133,9 @@ class TestOnSuccess(TestCase):
             },
             'text': 'Once upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'
         }
-        self.mock_gc.translations().list().execute.return_value = 'Thrice upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'
+        self.mock_gc.translations().list().execute.return_value = {
+            'translations': [{'translatedText':'Thrice upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'}]
+        }
         self.mock_gc.translations.reset_mock()
 
         self.streamer.on_success(data)
