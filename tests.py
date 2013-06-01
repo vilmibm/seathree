@@ -29,10 +29,11 @@ class TestTweetAuthoring(TestCase):
             'translated_text': 'Once upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups of ultimate eventuality'
         }
         self.streamer.tweet(details)
-        self.assertEqual(self.mock_tc.update_status.call_count, 2)
+        self.assertEqual(self.mock_tc.update_status.call_count, 3)
         calls = [
             mock.call.update_status(status='@foo: Once upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and...'),
-            mock.call.update_status(status='intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups'),
+            mock.call.update_status(status='intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups...'),
+            mock.call.update_status(status='of ultimate eventuality')
         ]
         self.mock_tc.assert_has_calls(calls)
 
@@ -88,7 +89,7 @@ class TestSigils(TestCase):
 
     def testMarkSigils(self):
         tweet = "@so_and_so look at this link http://some.link.com #awesome isn't it cool?"
-        expected_text = "xz0 look at this link xz1 xz2 isn't it cool?"
+        expected_text = "XZ0 look at this link XZ1 XZ2 isn't it cool?"
         expected_replaced = [
             "@so_and_so",
             "http://some.link.com",
@@ -99,7 +100,7 @@ class TestSigils(TestCase):
         self.assertEqual(replaced, expected_replaced)
 
     def test_restore_sigils(self):
-        marked_text = "xz0 look at this link xz1 xz2 isn't it cool?"
+        marked_text = "XZ0 look at this link XZ1 XZ2 isn't it cool?"
         replaced = [
             "@so_and_so",
             "http://some.link.com",
@@ -133,7 +134,7 @@ class TestOnSuccess(TestCase):
             'text': 'bar @someone #awesome http://www.foobarbaz.quux'
         }
         self.mock_gc.translations().list().execute.return_value = {
-            'translations': [{'translatedText':'quux xz0 xz1 xz2'}]
+            'translations': [{'translatedText':'quux XZ0 XZ1 XZ2'}]
         }
         self.mock_gc.translations.reset_mock()
 
@@ -159,6 +160,7 @@ class TestOnSuccess(TestCase):
         self.assertEqual(self.mock_gc.translations.call_count, 1)
         calls = [
             mock.call.update_status(status='@foo: Thrice upon a time long long ago in a galaxy far far away away away some things happend to some people of varying aspects and...'),
-            mock.call.update_status(status='intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups'),
+            mock.call.update_status(status='intents and gerbils wondered why cosmonauts drank iced kool-aid from the cups of woe, the cups of prison, the cups of prospect, the cups...'),
+            mock.call.update_status(status='of ultimate eventuality')
         ]
         self.mock_tc.assert_has_calls(calls)

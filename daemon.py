@@ -1,3 +1,4 @@
+import copy
 import httplib
 import json
 import re
@@ -141,18 +142,28 @@ class TranslationStreamer(TwythonStreamer):
         words = naive_tweet.split(' ')
         tweets = []
         current_tweet = ''
+        current_tweet = []
         while len(words) > 0:
-            if len(current_tweet+words[0]) < 137:
-                current_tweet += words.pop(0) + ' '
+            if len(' '.join(current_tweet+[words[0]])) < 137:
+                current_tweet.append(words.pop(0))
             else:
-                current_tweet = current_tweet[:-1] + '...' # shave off space
-                tweets.append(current_tweet) # makes a copy of current_tweet
-                current_tweet = ''
-        if current_tweet != '':
-            tweets.append(current_tweet)
-        tweets[len(tweets)-1] = tweets[len(tweets)-1][:-3] # shave off final ellipsis
-        print "Prepared tweets: %s" % tweets
+                tweets.append(copy.copy(current_tweet))
+                current_tweet = []
+
+        if len(current_tweet) > 0:
+            tweets.append(copy.copy(current_tweet))
+
+        joined_tweets = []
+        counter = 0
         for tweet in tweets:
+            tweet_str = ' '.join(tweet)
+            if counter != len(tweets) - 1:
+                tweet_str += '...'
+            counter += 1
+            joined_tweets.append(tweet_str)
+
+        print "Prepared tweets: %s" % joined_tweets
+        for tweet in joined_tweets:
             self.twitter_client.update_status(status=tweet)
 
     def listen(self):
