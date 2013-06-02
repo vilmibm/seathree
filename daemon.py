@@ -136,7 +136,7 @@ class TranslationStreamer(TwythonStreamer):
         """
         text = details['translated_text']
         screen_name = details['user']['screen_name']
-        naive_tweet = "@{screen_name}: {text}".format(screen_name=screen_name, text=text)
+        naive_tweet = ".@{screen_name}: {text}".format(screen_name=screen_name, text=text)
         if len(naive_tweet) <= 140:
             print "Prepared tweet: %s" % naive_tweet
             return self.twitter_client.update_status(status=naive_tweet)
@@ -144,7 +144,6 @@ class TranslationStreamer(TwythonStreamer):
 
         words = naive_tweet.split(' ')
         tweets = []
-        current_tweet = ''
         current_tweet = []
         while len(words) > 0:
             if len(' '.join(current_tweet+[words[0]])) < 137:
