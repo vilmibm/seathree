@@ -1,4 +1,5 @@
 import copy
+import HTMLParser
 import httplib
 import json
 import re
@@ -25,6 +26,7 @@ def get_twitter_auth():
            secrets['USER_AUTH']['oauth_token_secret']
 
 class TranslationStreamer(TwythonStreamer):
+    hp = HTMLParser.HTMLParser()
     def set_twitter_client(self, client):
         self.twitter_client = client
 
@@ -41,7 +43,8 @@ class TranslationStreamer(TwythonStreamer):
         _translate = lambda q,s,t: self.google_client.translations().list(source=s, target=t, q=q).execute()['translations'][0]['translatedText']
         while retries > 0:
             try:
-                return _translate(text, source, target)
+                translated = _translate(text, source, target)
+                return self.hp.unescape(translated)
             except httplib.BadStatusLine:
                 retries -= 1
         return None
