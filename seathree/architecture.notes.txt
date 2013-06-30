@@ -1,0 +1,11 @@
+use hstore to map twitter account -> last sync and twitter account ->
+last request and twitter account -> tweets (array). store at most X tweets?
+
+front end polls every x seconds with a list of followings
+
+single exposed url: get-tweets <usernames>
+
+to fulfill the request:
+ - pull all tweets from hstore and send them.
+ - if hstore is empty or last-sync is beyond acceptable, fulfill
+ request as empty (ie don't hang) but spawn a thread to refill hstore
