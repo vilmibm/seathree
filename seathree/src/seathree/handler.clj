@@ -9,7 +9,7 @@
 (defn valid?
   "TODO"
   [request]
-  (let [content-type ("content-type" (:headers request))
+  (let [content-type (get (:headers request) "content-type")
         body         (:body request)]
     (and
      (= content-type "application/json")
@@ -34,7 +34,6 @@
    :body "Bad request"})
 
 (defn handler [request]
-  (println request)
   (if (valid? request)
     (success (extract-usernames request))
     (fail)))

@@ -6,12 +6,13 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/data.json "0.2.2"]
                  [org.clojure/tools.logging "0.2.6"]
+                 [clj-time "0.5.1"]
+                 [com.taoensso/carmine "2.0.0-beta2"]
                  [log4j "1.2.15" :exclusions [
                                               javax.mail/mail
                                               javax.jms/jms
                                               com.sun.jdmk/jmxtools
                                               com.sun.jmx/jmxri]]
-                 [postgresql "9.1-901.jdbc4"]
                  [ring "1.2.0-RC1"]
                  [amalloy/ring-gzip-middleware "0.1.2"]
                  [ring/ring-jetty-adapter "1.1.8"]
