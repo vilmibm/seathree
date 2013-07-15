@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/data.json "0.2.2"]
                  [org.clojure/tools.logging "0.2.6"]
+                 [org.clojure/tools.nrepl "0.2.3"]
                  [clj-time "0.5.1"]
                  [com.taoensso/carmine "2.0.0-beta2"]
                  [log4j "1.2.15" :exclusions [
@@ -19,4 +20,5 @@
                  [ring/ring-json "0.2.0"]
                  [twitter-api "0.7.4"]]
   :plugins [[lein-ring "0.8.5"]]
+  :main seathree.handler
   :ring {:handler seathree.handler/app})

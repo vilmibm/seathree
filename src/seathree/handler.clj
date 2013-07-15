@@ -1,8 +1,10 @@
 (ns seathree.handler
+  (:gen-class)
   (use clojure.tools.logging
        ring.middleware.json
        seathree.core)
-  (require [clojure.data.json :as json]))
+  (require [clojure.data.json          :as json] ; TODO look into cheshire
+           [clojure.tools.nrepl.server :as nrsv]))
 
 ; TODO gzipping
 
@@ -40,3 +42,11 @@
 
 (def app
   (wrap-json-body handler {:keywords? true}))
+
+(def -main
+  "Serve app. Poll Twitter."
+  [& args]
+  (comment TODO polling)
+  (defonce server (nrsrv/start-server :port 8999))
+  (server/serve app {:open-browser? false})
+  (println "Serving."))
