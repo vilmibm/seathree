@@ -13,7 +13,7 @@
 (def stale (time/minutes 5))
 
 ; defaults
-(def conn {:pool {} :spec {}})
+(def conn {:pool {} :spec {:host "localhost" :port 6379}})
 (defmacro wcar* [& body] `(car/wcar conn ~@body))
 
 (defn update-last-sync 
@@ -26,7 +26,7 @@
   "Mark the given username's last update time as now"
   [username]
   (println "TOPPING OFF")
-  (wcar* (car/set (update-key username (time-to-str (time/now))))))
+  (wcar* (car/set (update-key username) (time-to-str (time/now)))))
 
 (defn update-tweets-for
   "Given a username, immediately update its update timestamp to
@@ -38,7 +38,7 @@
   (println "HELLO")
   (top-off-update username)
   ;; TODO stub
-  (wcar* (car/lpush (tweets-key username) ["foo" "bar" "baz" "quuz"])))
+  (wcar* (car/lpush (tweets-key username) "foo" "bar" "baz" "quuz")))
 
 (defn check-freshness
   "Given a twitter username and a timestamp, check to see if the
@@ -56,7 +56,7 @@
    of translated tweets"
   [usernames]
   (for [username usernames]
-    (let [[tweets last-update] (wcar* (car/get (tweets-key username))
+    (let [[tweets last-update] (wcar* (car/lrange (tweets-key username) 0 9)
                                       (car/get (update-key username)))]
       (update-last-sync (sync-key username) (time/now)) ; TODO move this to handler. Should only touch this value when an actual request comes in.
       (check-freshness username (str-to-time last-update))

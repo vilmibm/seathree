@@ -1,5 +1,5 @@
 (ns seathree.keys
-  (:use [clojure.string]))
+  (:use [clojure.string :only [join]]))
 
 (defn gen-key
   "Generates redis keys based on the form <lookup>_<name>"
