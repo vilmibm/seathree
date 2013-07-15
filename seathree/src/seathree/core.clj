@@ -25,7 +25,7 @@
 (defn top-off-update
   "Mark the given username's last update time as now"
   [username]
-  (println "TOPPING OFF")
+  (println "TOPPING OFF FOR" username)
   (wcar* (car/set (update-key username) (time-to-str (time/now)))))
 
 (defn update-tweets-for
@@ -35,7 +35,6 @@
    parallel against google translate and store the resulting tweets in
    redis"
   [username since]
-  (println "HELLO")
   (top-off-update username)
   ;; TODO stub
   (wcar* (car/lpush (tweets-key username) "foo" "bar" "baz" "quuz")))
@@ -47,15 +46,16 @@
   (future
     (if (time/before? last-update (time/minus (time/now) stale))
       (do
-        (println "UPDATING TWEETS" username)
+        (println "UPDATING TWEETS FOR" username)
         (update-tweets-for username last-update))
-      (println "NOTHING"))))
+      (println "TWEETS FRESH FOR" username))))
 
 (defn tweets-for
   "Given a list of twitter handles, returns a map of username -> list
    of translated tweets"
   [usernames]
   (for [username usernames]
+    (println "FETCHING TWEETS FOR" username)
     (let [[tweets last-update] (wcar* (car/lrange (tweets-key username) 0 9)
                                       (car/get (update-key username)))]
       (update-last-sync (sync-key username) (time/now)) ; TODO move this to handler. Should only touch this value when an actual request comes in.
