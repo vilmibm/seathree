@@ -3,10 +3,13 @@
   (use clojure.tools.logging
        ring.middleware.json
        seathree.core)
-  (require [clojure.data.json          :as json] ; TODO look into cheshire
-           [clojure.tools.nrepl.server :as nrsv]))
+  (require [clojure.data.json          :as json   ] ; TODO look into cheshire
+           [clojure.tools.nrepl.server :as nrsv   ]
+           [seathree.config            :as cfg    ]
+           [seathree.twitter           :as twitter]))
 
-; TODO gzipping
+(comment TODO gzipping)
+(comment TODO re-architect to work with status ids instead of update timestamps!)
 
 (defn valid?
   "TODO"
@@ -46,7 +49,10 @@
 (def -main
   "Serve app. Poll Twitter."
   [& args]
+  (defonce config (cfg/get-cfg))
+  (defonce twitter-creds (twitter/twitter-creds-from-cfg config))
   (comment TODO polling)
+  ; e.g. (twitter/get-statuses [twitter-creds username since-id 3)
   (defonce server (nrsrv/start-server :port 8999))
   (server/serve app {:open-browser? false})
   (println "Serving."))

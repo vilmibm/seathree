@@ -1,25 +1,26 @@
 (ns seathree.twitter
   (use twitter.oauth
-       twitter.api.restful)
-  (require [seathree.config :as cfg]))
+       twitter.api.restful))
 
-(def creds (let [twitter-creds (cfg/get-twitter-creds)]
+(defn twitter-creds-from-cfg
+  "TODO"
+  [cfg]
+  (let [twitter-creds (:oauth (:twitter cfg))]
              (make-oauth-creds (:consumer-key        twitter-creds)
                                (:consuer-secret      twitter-creds)
                                (:access-token        twitter-creds)
                                (:access-token-secret twitter-creds))))
-
+  
 (defn match [re s] (not (nil? (re-seq re s))))
 
 (defn extract-tweets-from-body
   "TODO"
   [body]
   (map :text body))
-  
 
 (defn get-statuses
   "TODO"
-  [username since-id retries]
+  [creds username since-id retries]
   (if (= 0 retries)
     nil
     (let [base-params   {:screen-name username :include-rts false}

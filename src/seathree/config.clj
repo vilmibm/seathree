@@ -7,10 +7,3 @@
   "TODO"
   [path]
   (eval (read-string (slurp path))))
-
-(defn get-twitter-creds
-  "TODO"
-  []
-  (:oauth (:twitter (get-cfg config-path))))
-
- 
