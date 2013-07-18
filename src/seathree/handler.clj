@@ -9,6 +9,9 @@
            [seathree.config            :as cfg    ]
            [seathree.twitter           :as twitter]))
 
+;; Update: getting tweets from twitter, storing
+;; Sync: request from client for a username
+
 (comment TODO gzipping)
 (comment TODO re-architect to work with status ids instead of update timestamps!)
 
