@@ -3,7 +3,8 @@
   (use clojure.tools.logging
        ring.middleware.json
        seathree.core)
-  (require [clojure.data.json          :as json   ] ; TODO look into cheshire
+  (require [clj-time.core              :as time   ]
+           [clojure.data.json          :as json   ] ; TODO look into cheshire
            [clojure.tools.nrepl.server :as nrsv   ]
            [seathree.config            :as cfg    ]
            [seathree.twitter           :as twitter]))
@@ -28,6 +29,8 @@
 (defn success
   "TODO"
   [usernames]
+  (future (for [username usernames]
+            (update-last-sync username (time/now))))
   {:status 200
    :headers {"Content-Type" "application/json"}
    :body (json/write-str (tweets-for usernames))})

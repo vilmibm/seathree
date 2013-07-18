@@ -5,5 +5,5 @@
 
 (defn get-cfg
   "TODO"
-  [path]
-  (eval (read-string (slurp path))))
+  []
+  (eval (read-string (slurp config-path))))
