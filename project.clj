@@ -18,6 +18,7 @@
                  [amalloy/ring-gzip-middleware "0.1.2"]
                  [ring/ring-jetty-adapter "1.1.8"]
                  [ring/ring-json "0.2.0"]
+                 [ring-server "0.2.8"]
                  [twitter-api "0.7.4"]]
   :plugins [[lein-ring "0.8.5"]]
   :main seathree.handler

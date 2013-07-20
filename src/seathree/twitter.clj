@@ -32,7 +32,7 @@
           response      (statuses-user-timeline :oauth-creds creds :params params)
           status-string (format "%d" (:code (:status response)))] 
       (condp match status-string
-        #"[45].." (do
+        #"^[45]" (do
                     (println "Twitter threw a" status-string "for" username ":" (:msg (:status response)))
                     (get-statuses username since-id (- retries 1)))
-        #"2.."    (extract-tweets-from-body (:body response))))))
+        #"^2"    (extract-tweets-from-body (:body response))))))

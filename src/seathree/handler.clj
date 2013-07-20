@@ -4,61 +4,65 @@
        ring.middleware.json
        seathree.core)
   (require [clj-time.core              :as time   ]
-           [clojure.data.json          :as json   ] ; TODO look into cheshire
-           [clojure.tools.nrepl.server :as nrsv   ]
+           [clojure.tools.nrepl.server :as nrsrv  ]
+           [ring.server.standalone     :as server ]
            [seathree.config            :as cfg    ]
            [seathree.twitter           :as twitter]))
 
 ;; Update: getting tweets from twitter, storing
 ;; Sync: request from client for a username
+; {username: "foobar", src:"es", tgt: "en"}
 
-(comment TODO gzipping)
-(comment TODO re-architect to work with status ids instead of update timestamps!)
+(defn exists?
+  "Given a map whose values are strings (or sequences) and some
+   list of keys, check that the collection has the keys and that
+   they are not empty"
+  [coll & keys]
+  (let [exists?' (fn [x]   (and (contains? coll x) (not (empty? (coll x)))))
+        reductor (fn [x y] (and x (exists?' y)))]
+    (reduce reductor keys)))
 
 (defn valid?
-  "TODO"
+  "Given a request, validate that it is json and well formed"
   [request]
   (let [content-type (get (:headers request) "content-type")
         body         (:body request)]
     (and
      (= content-type "application/json")
-     (not (empty? (:usernames body))))))
-
-(defn extract-usernames
-  "TODO"
-  [request]
-  (:usernames (:body request)))
+     (every? #(exists? % :username :src :tgt) body))))
 
 (defn success
-  "TODO"
-  [usernames]
-  (future (for [username usernames]
-            (update-last-sync username (time/now))))
+  "Handler for a successful request."
+  [people]
+  (future (for [person people]
+            (update-last-sync person (time/now))))
   {:status 200
-   :headers {"Content-Type" "application/json"}
-   :body (json/write-str (tweets-for usernames))})
+   :body (tweets-for people)})
 
 (defn fail
-  "TODO"
+  "Handler for a failed request. Generic client error (400)."
   []
   {:status 400
    :body "Bad request"})
 
 (defn handler [request]
   (if (valid? request)
-    (success (extract-usernames request))
+    (success (:body request))
     (fail)))
 
 (def app
-  (wrap-json-body handler {:keywords? true}))
+  (-> handler
+      (wrap-json-response)
+      (wrap-json-body handler {:keywords? true})
+      (wrap-gzip)))
 
-(def -main
+(defn -main
   "Serve app. Poll Twitter."
   [& args]
   (defonce config (cfg/get-cfg))
-  (defonce twitter-creds (twitter/twitter-creds-from-cfg config))
+  (defonce twitter-creds (twitter/creds-from-cfg config))
   (comment TODO polling)
   ; e.g. (twitter/get-statuses [twitter-creds username since-id 3)
-  (defonce server (nrsrv/start-server :port 8999))
+  (defonce server (nrsrv/start-server :port 3333))
   (server/serve app {:open-browser? false})
   (println "Serving."))
