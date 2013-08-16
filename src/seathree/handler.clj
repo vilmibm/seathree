@@ -50,11 +50,11 @@
     (success (:body request))
     (fail)))
 
+; TODO wrap-gzip
 (def app
   (-> handler
       (wrap-json-response)
-      (wrap-json-body handler {:keywords? true})
-      (wrap-gzip)))
+      (wrap-json-body handler {:keywords? true})))
 
 (defn -main
   "Serve app. Poll Twitter."
