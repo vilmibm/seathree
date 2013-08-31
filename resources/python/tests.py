@@ -7,9 +7,18 @@ import translate
 
 class TestTranslate(TestCase):
     def test_success(self):
-        pass
-    def test_failure(self):
-        pass
+        execute_result = {'translations': [{'translatedText':'hello how are&amp;you'}]}
+
+        mock_client = Mock()
+        mock1       = Mock()
+        mock0       = Mock()
+
+        mock1.execute.return_value = execute_result
+        mock0.list.return_value    = mock1
+        mock_client.translations.return_value = mock0
+
+        translated = translate.translate(mock_client, "", "", "")
+        self.assertEqual(translated, "hello how are&you")
 
 class TestSigils(TestCase):
     def test_mark_sigils(self):

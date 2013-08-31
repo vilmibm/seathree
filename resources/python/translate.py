@@ -6,11 +6,11 @@ language since this was already working.
 Usage: python <script>.py google_api_key srclang targetlang 'text'
 
 Prints translation to STDOUT if successful.
-
 Returns 0 if successful, 1 otherwise.
 """
 import HTMLParser
 import httplib
+import re
 import sys
 
 # Google's poorly named thing. It cannot be installed into a virtualenv; be warned.
@@ -49,7 +49,7 @@ def mark_sigils(raw_text):
     counter = 0
     marked_text = raw_text
     for symbol in symbols:
-        marked_text = marked_text.replace(symbol, self.mksigil(counter))
+        marked_text = marked_text.replace(symbol, mksigil(counter))
         counter += 1
 
     return marked_text, symbols
@@ -62,7 +62,7 @@ def restore_sigils(marked_text, symbols):
     counter = 0
     unmarked_text = marked_text
     for symbol in symbols:
-        unmarked_text = unmarked_text.replace(self.mksigil(counter), symbol)
+        unmarked_text = unmarked_text.replace(mksigil(counter), symbol)
         counter += 1
 
     return unmarked_text
