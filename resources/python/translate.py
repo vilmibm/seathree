@@ -15,6 +15,7 @@ import sys
 
 # Google's poorly named thing. It cannot be installed into a virtualenv; be warned.
 from apiclient.discovery import build
+from apiclient.errors    import HttpError
 
 def mksigil(c):
     """
@@ -88,7 +89,13 @@ def main(key, src, target, text):
 
     try:
         print restore_sigils(translate(client, marked_text, src, target), sigils)
+        return 0
     except httplib.BadStatusLine:
-        exit(1)
+        return 1
+    except HttpError:
+        return 2
 
-if __name__ == '__main__': main(*sys.argv[1:])
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    if len(args) < 4: exit(1)
+    exit( main(*args) )
