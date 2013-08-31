@@ -22,11 +22,19 @@
         reductor (fn [x y] (and x (exists?' y)))]
     (reduce reductor keys)))
 
+(defn map-keys-to-keywords
+  "Given a map, convert its keys to keywords"
+  [m]
+  (println m)
+  (into {}
+        (for [[k v] m]
+          [(keyword k) v])))
+
 (defn valid?
   "Given a request, validate that it is json and well formed"
   [request]
   (let [content-type (get (:headers request) "content-type")
-        body         (:body request)]
+        body         (map map-keys-to-keywords (:body request))]
     (and
      (= content-type "application/json")
      (every? #(exists? % :username :src :tgt) body))))
@@ -47,7 +55,7 @@
 
 (defn handler [request]
   (if (valid? request)
-    (success (:body request))
+    (success (map-keys-to-keywords (:body request)))
     (fail)))
 
 ; TODO wrap-gzip

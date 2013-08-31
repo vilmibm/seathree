@@ -43,7 +43,7 @@
   (let [creds      (twitter/creds-from-cfg (cfg/get-cfg))
         last-tweet (wcar* (car/lindex (tweets-key person) 0))
         since-id   (:id last-tweet)
-        raw-tweets (twitter/get-statuses creds (:username person) since-id)
+        raw-tweets (twitter/get-statuses creds (:username person) since-id 1)
         translated (for [raw-tweet raw-tweets]
                      (translate/translate raw-tweet (:src person) (:tgt person) 3))]
     (wcar* (apply (partial car/lpush (tweets-key person)) translated))))
@@ -52,8 +52,9 @@
   "Given a person and a timestamp, check to see if the
    user's tweets need to be refreshed"
   [person last-update]
+  (println person last-update)
   (if (time/before? last-update (time/minus (time/now) stale))
-    (update-tweets-for person last-update)
+    (update-tweets-for person)
     (println "TWEETS FRESH FOR" person)))
 
 (defn tweets-for
