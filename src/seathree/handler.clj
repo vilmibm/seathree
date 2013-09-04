@@ -25,7 +25,6 @@
 (defn map-keys-to-keywords
   "Given a map, convert its keys to keywords"
   [m]
-  (println m)
   (into {}
         (for [[k v] m]
           [(keyword k) v])))
@@ -55,7 +54,7 @@
 
 (defn handler [request]
   (if (valid? request)
-    (success (map-keys-to-keywords (:body request)))
+    (success (map map-keys-to-keywords (:body request)))
     (fail)))
 
 ; TODO wrap-gzip
