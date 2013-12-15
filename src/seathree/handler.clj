@@ -12,6 +12,7 @@
            [seathree.routes :as routes]))
 
 (declare config)
+(def default-cfg-path "resources/secrets.clj")
 
 (defroutes routes
     (GET "/tweets" [user-data] {:status 200
@@ -30,6 +31,7 @@
         host     (or (get args ":host") "localhost")
         port     (Integer. (or (get args ":port") 8888))
         ws-port  (Integer. (or (get args ":ws-port") 8889))
+        cfg-path (or (get args ":config") default-cfg-path)
         log-file (or (get args ":log-file") "/tmp/C3.log")]
 
     (log/set-config! [:timestamp-pattern] "yyyy-MM-dd HH:mm:ss ZZ")
@@ -37,7 +39,7 @@
     (log/set-config! [:shared-appender-config :spit-filename] log-file)
 
     (log/info "STARTUP: Reading config")
-    (defonce config (cfg/get-cfg))
+    (defonce config (cfg/get-cfg cfg-path))
 
     (log/info "STARTUP: starting jetty on" host "port" port)
     (run-jetty app {:port port :host host :join? false})
