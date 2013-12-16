@@ -10,7 +10,7 @@
 (def stale (time/minutes 5))
 
 (defmacro redis [cfg & body]
-  `(wcar {:pool {} :spec (select-keys (:redis cfg) [:host :port])}
+  `(wcar {:pool {} :spec (select-keys (:redis ~cfg) [:host :port])}
          ~@body))
 
 (defn process-failed? [result] (> (:exit result) 0))
