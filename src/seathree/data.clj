@@ -70,11 +70,12 @@
       (tfmt/parse formatter ts-string))))
   
 (defn with-retries [retries function & args]
-  (loop [retries-left retries]
-    (let [result (apply function args)]
-      (if (nil? result)
-        (if (> retries-left 0) (recur (dec retries-left)) nil)
-        result))))
+  (if (> retries 0)
+    (loop [retries-left retries]
+      (let [result (apply function args)]
+        (if (nil? result)
+          (if (> retries-left 0) (recur (dec retries-left)) nil)
+          result)))))
 
 (defn translate
   "Given a user-data map and a single tweet's text, spawn a python
