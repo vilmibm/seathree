@@ -9,7 +9,16 @@
            
 (def stale (time/minutes 5))
 
-(defmacro redis [cfg & body]
+(defn redis
+  "Function-based wrapper around redis API. A macro would be nicer but
+   I'm not sure how to mock out macros for tests."
+  [cfg function]
+  (wcar {:pool {} :spec (select-keys (:redis cfg) [:host :port])}
+        (function)))
+
+(defmacro redis'
+  "useful when testing in REPL"
+  [cfg & body]
   `(wcar {:pool {} :spec (select-keys (:redis ~cfg) [:host :port])}
          ~@body))
 
@@ -57,22 +66,22 @@
   [cfg key-fn user-data & [timestamp]]
   (let [key       (key-fn user-data)
         timestamp (or timestamp (time/now))]
-    (redis cfg (car/set key (tfmt/unparse formatter timestamp))))) 
+    (redis cfg #(car/set key (tfmt/unparse formatter timestamp))))) 
 
 (defn get-ts
   "For the given key function and user-data, return the stored
    timestamp from Redis."
   [cfg key-fn user-data]
   (let [key       (key-fn user-data)
-        ts-string (redis cfg (car/get key))]
+        ts-string (redis cfg #(car/get key))]
     (if (nil? ts-string) 
       (time/minus (time/now) (time/years 1000)) 
       (tfmt/parse formatter ts-string))))
   
-(defn with-retries [retries function & args]
+(defn with-retries [retries function]
   (if (> retries 0)
     (loop [retries-left retries]
-      (let [result (apply function args)]
+      (let [result (function)]
         (if (nil? result)
           (if (> retries-left 0) (recur (dec retries-left)) nil)
           result)))))
@@ -99,31 +108,32 @@
   (future 
     ;; First, get the timestamp for the last time these tweets were
     ;; refreshed. We might not have to do any work.
-    (let [last-refresh (get-ts refresh-key user-data)]
+    (let [last-refresh (get-ts cfg refresh-key user-data)]
       (if (time/before? last-refresh (time/minus (time/now) stale))
-        ;; Second, update the last refresh timestamp for the given
-        ;; user data map. That way, if another thread attempts to run
-        ;; this update it will stop and not duplicate effort.
-        (store-ts! refresh-key user-data)
-        ;; Now for actually refreshing tweets. Start by getting the
-        ;; most recent tweet for this person (We only want to ask for
-        ;; tweets after this tweet's id)
-        (let [last-tweet-id     (:id (redis cfg (car/lindex (tweets-key user-data) 0)))
-              tweets            (with-retries 3 get-tweets-from-twitter cfg user-data last-tweet-id)]
-          (if (not (empty? tweets))
-            (let [retrying-translate #(with-retries 3 translate cfg user-data %)
-                  translated-tweets (->> tweets
-                                         (map retrying-translate)
-                                         (filter #(not (nil? %))))]
-              (if (not (empty? translated-tweets))
-                (redis cfg (car/lpush (tweets-key user-data) translated-tweets))))))))))
+        (do
+          ;; Second, update the last refresh timestamp for the given
+          ;; user data map. That way, if another thread attempts to run
+          ;; this update it will stop and not duplicate effort.
+          (store-ts! cfg refresh-key user-data)
+          ;; Now for actually refreshing tweets. Start by getting the
+          ;; most recent tweet for this person (We only want to ask for
+          ;; tweets after this tweet's id)
+          (let [last-tweet-id     (:id (redis cfg #(car/lindex (tweets-key user-data) 0)))
+                tweets            (with-retries 3 #(get-tweets-from-twitter cfg user-data last-tweet-id))]
+            (if (not (empty? tweets))
+              (let [retrying-translate (fn [text] (with-retries 3 #(translate cfg user-data) text))
+                    translated-tweets  (->> tweets
+                                            (map retrying-translate)
+                                            (filter #(not (nil? %))))]
+                (if (not (empty? translated-tweets))
+                    (redis cfg #(car/lpush (tweets-key user-data) translated-tweets)))))))))))
 
 (defn get-tweets-from-cache
   "Pull out and return all tweet data for the requested user
-   map. Assocs tweet list with user data. Adds most recent 10 tweets."
+   map. Assocs tweet list with user data."
   [cfg user-data]
-  (let [num-tweets        (redis cfg (car/llen (tweets-key user-data)))
-        translated-tweets (redis cfg (car/lrange (tweets-key user-data) 0 num-tweets))]
+  (let [num-tweets        (redis cfg #(car/llen (tweets-key user-data)))
+        translated-tweets (redis cfg #(car/lrange (tweets-key user-data) 0 num-tweets))]
     (assoc user-data :tweets translated-tweets)))
 
 
