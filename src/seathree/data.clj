@@ -1,6 +1,6 @@
 (ns seathree.data
   (require [clojure.string       :as str              ]
-           [clojure.java.shell   :refer :all          ]
+           [clojure.java.shell   :refer [sh]          ]
            [clj-time.core        :as time             ]
            [clj-time.format      :as tfmt             ]
            [taoensso.carmine     :as car :refer (wcar)]
@@ -128,6 +128,8 @@
                 (if (not (empty? translated-tweets))
                     (redis cfg #(car/lpush (tweets-key user-data) translated-tweets)))))))))))
 
+;; TODO why does this assoc user-data? It should just return a list of
+;;      tweets like get-tweets-from-twitter.
 (defn get-tweets-from-cache
   "Pull out and return all tweet data for the requested user
    map. Assocs tweet list with user data."

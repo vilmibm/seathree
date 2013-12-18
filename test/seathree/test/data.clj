@@ -1,5 +1,6 @@
 (ns seathree.test.data
   (:require [clojure.test :refer :all]
+            [clojure.java.shell :refer [sh]]
             [clj-time.core :as time]
             [clj-time.format :as tfmt]
             [taoensso.carmine :as car]
@@ -171,6 +172,27 @@
           (is (= true @translate-called))
           (is (= false @lpush-called)))))))
 
-(deftest get-tweets-from-twitter)
+(deftest translate
+  (testing "passes proper data to python"
+    (let [shell-args (atom [])]
+      (with-redefs [sh (fn [& a] (swap! shell-args (fn-lift a)) {:exit 1})]
+        (data/translate {:google {:key "foo"}} user-data "hi")
+        (is (= @shell-args ["python" "resources/python/translate.py" "foo" "en" "es" "'hi'"])))))
+  
+  (testing "when google fails"
+    (let [shell-called (atom false)]
+      (with-redefs [sh (fn [& a] (swap! shell-called true-fn) {:exit 1})]
+        (let [result (data/translate _ user-data "hello")]
+          (is (= @shell-called true))
+          (is (= result nil))))))
 
-(deftest translate)
+  (testing "when google succeeds"
+    (with-redefs [sh (fn-lift {:exit 0 :out "hola\n"})]
+      (let [result (data/translate _ user-data "hi")]
+        (is (= result "hola"))))))
+
+(deftest get-tweets-from-twitter
+  (testing "when twitter fails")
+  (testing "when twitter suceeeds")
+  (testing "with last-tweet-id")
+  (testing "without last-tweet-id"))
