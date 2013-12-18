@@ -120,8 +120,8 @@
           ;; tweets after this tweet's id)
           (let [last-tweet-id     (:id (redis cfg #(car/lindex (tweets-key user-data) 0)))
                 tweets            (with-retries 3 #(get-tweets-from-twitter cfg user-data last-tweet-id))]
-            (if (not (empty? tweets))
-              (let [retrying-translate (fn [text] (with-retries 3 #(translate cfg user-data) text))
+            (if (not (nil? tweets))
+              (let [retrying-translate (fn [text] (with-retries 3 #(translate cfg user-data text)))
                     translated-tweets  (->> tweets
                                             (map retrying-translate)
                                             (filter #(not (nil? %))))]

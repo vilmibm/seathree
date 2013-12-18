@@ -8,10 +8,10 @@
 
 (def user-data {:username "nate_smith" :src "en" :tgt "es"})
 (def _ nil)
-
-(defn fn-lift
-  [value]
-  (fn [& args] value))
+(defn fn-lift [value] (fn [& args] value))
+(def nil-fn (fn-lift nil))
+(def true-fn (fn-lift true))
+(def false-fn (fn-lift false))
 
 (deftest process-failed?
   (testing "process failed"
@@ -67,8 +67,8 @@
     (let [call-args    (atom [])
           redis-called (atom false)
           now-called   (atom false)]
-      (with-redefs [data/redis   (fn [_ fn] (swap! redis-called (fn-lift true)) (fn))
-                    time/now     (fn [] (swap! now-called (fn-lift true)))
+      (with-redefs [data/redis   (fn [_ fn] (swap! redis-called true-fn) (fn))
+                    time/now     (fn [] (swap! now-called true-fn))
                     tfmt/unparse (fn [f t] t)
                     car/set      (fn [k v] (swap! call-args (fn-lift [k v])))]
         (data/store-ts! {} (fn-lift "foo") {} "barbaz")
@@ -79,8 +79,8 @@
     (let [call-args    (atom [])
           redis-called (atom false)
           now-called   (atom false)]
-      (with-redefs [data/redis   (fn [_ fn] (swap! redis-called (fn-lift true)) (fn))
-                    time/now     (fn [] (swap! now-called (fn-lift true)) "barbaz")
+      (with-redefs [data/redis   (fn [_ fn] (swap! redis-called true-fn) (fn))
+                    time/now     (fn [] (swap! now-called true-fn) "barbaz")
                     tfmt/unparse (fn [f t] t)
                     car/set      (fn [k v] (swap! call-args (fn-lift [k v])))]
         (data/store-ts! {} (fn-lift "foo") {})
@@ -98,7 +98,7 @@
   (testing "handles nil"
     (with-redefs [time/minus (fn-lift "foo")
                   tfmt/parse (fn-lift "bar")
-                  data/redis (fn-lift nil)]
+                  data/redis nil-fn]
       (let [result (data/get-ts _ (fn-lift "baz") _)]
         (is (= result "foo"))))))
 
@@ -111,37 +111,66 @@
         (is (= @call-args ["tweets_nate_smith_en_es" 0 100]))
         (is (= result (assoc user-data :tweets [:tweets-here])))))))
 
-
-(deftest get-tweets-from-twitter)
-
-(deftest translate)
-
 (deftest refresh-tweets!
   (let [now           (time/now)
         stale         (time/minutes 5)] ;; pin this so tests can hardcode against 5
     (testing "when data is fresh"
-      (let [redis-called (atom false)]
+      (let [redis-called (atom false)
+            now-called   (atom false)]
         (with-redefs [data/stale  stale 
                       data/get-ts (fn-lift (time/minus now (time/minutes 1)))
-                      time/now    now
-                      data/redis  (fn [_ _] (swap! redis-called (fn-lift true)))]
-          (data/refresh-tweets! _ user-data)
-          (is (= false @redis-called) "redis is not called"))))
+                      time/now    (fn [] (swap! now-called true-fn) now)
+                      data/redis  (fn [_ _] (swap! redis-called true-fn))]
+          @(data/refresh-tweets! _ user-data)
+          (is (= false @redis-called) "redis is not called")
+          (is (= true @now-called)))))
+
     (testing "when data is stale"
       (let [store-ts-called (atom false)
             lpush-args      (atom [])]
       (with-redefs [data/stale                   stale
-                    data/get-ts                  (fn-lift (time/minus now (time/minutes 6)))
-                    time/now                     now
+                    data/get-ts                  (fn-lift (time/minus now (time/minutes 10)))
+                    time/now                     (fn-lift now)
                     data/redis                   (fn [_ f] (f))
-                    data/store-ts!               (fn [_ _ _] (swap! store-ts-called (fn-lift true)))
+                    data/store-ts!               (fn [_ _ _] (swap! store-ts-called true-fn))
                     car/lindex                   (fn [_ _] {:id 123})
                     car/lpush                    (fn [_ tweets] (swap! lpush-args (fn-lift tweets)))
                     data/get-tweets-from-twitter (fn-lift ["one" "two" "three"])
                     data/translate               (fn-lift "four")]
-        (data/refresh-tweets! _ user-data)
-        (comment TODO))))
+        @(data/refresh-tweets! _ user-data)
+        (is (= true @store-ts-called))
+        (is (= @lpush-args ["four" "four" "four"])))))
 
-    (testing "when twitter API fails")
-    (testing "when translation fails")))
+    (testing "when twitter API fails"
+      (let [translate-called (atom false)
+            twitter-called   (atom false)]
+        (with-redefs [data/get-ts                  nil-fn
+                      data/store-ts!               nil-fn
+                      time/before?                 true-fn
+                      data/redis                   nil-fn
+                      data/get-tweets-from-twitter (fn [_ _ _] (swap! twitter-called true-fn) nil)
+                      data/translate               (fn [_ _ _] (swap! translate-called true-fn))]
+          @(data/refresh-tweets! _ user-data)
+          (is (= true @twitter-called)) "twitter is called")
+          (is (= false @translate-called) "translate is not called")))
 
+    (testing "when translation fails"
+      (let [translate-called (atom false)
+            lindex-called    (atom false)
+            lpush-called     (atom false)]
+        (with-redefs [data/get-ts                  nil-fn
+                      data/store-ts!               nil-fn
+                      time/before?                 true-fn
+                      data/redis                   (fn [_ f] (f))
+                      car/lindex                   (fn [_ _] (swap! lindex-called true-fn) nil)
+                      data/get-tweets-from-twitter (fn-lift ["hi" "there" "you"])
+                      data/translate               (fn [_ _ _] (swap! translate-called true-fn) nil)
+                      car/lpush                    (fn [_ _] (swap! lpush-called true-fn))]
+          @(data/refresh-tweets! _ user-data)
+          (is (= true @lindex-called))
+          (is (= true @translate-called))
+          (is (= false @lpush-called)))))))
+
+(deftest get-tweets-from-twitter)
+
+(deftest translate)
