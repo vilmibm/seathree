@@ -6,6 +6,7 @@
            [cheshire.core :as json]
            [ring.adapter.jetty :refer (run-jetty)]
            [ring.middleware.gzip :refer :all]
+           [ring.util.response :refer [response]]
            [taoensso.timbre :as log]
            [seathree.config :as cfg]
            [seathree.data :as data]
@@ -15,15 +16,15 @@
 (def default-cfg-path "resources/secrets.clj")
 
 (defroutes routes
-    (GET "/tweets" [user-data] {:status 200
-                                :content-type "application/json"
-                                :body (json/generate-string
-                                       (routes/tweets config
-                                                      (json/parse-string true user-data)))}))
+    (GET "/tweets-for-user" [user-data] (response (routes/tweets config (json/parse-string true user-data))))
+    (GET "/tweets-for-many" [user-data-list] (response
+                                              (map (partial routes/tweets config)
+                                                   (json/parse-string true user-data-list)))))
 
 (def app
   (-> routes
-      (wrap-json-response)))
+      (wrap-json-response)
+      (wrap-gzip)))
 
 (defn -main
   [& args]
