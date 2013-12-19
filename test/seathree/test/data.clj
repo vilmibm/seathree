@@ -1,19 +1,15 @@
 (ns seathree.test.data
-  (:require [clojure.test        :refer :all]
-            [clojure.java.shell  :refer [sh]]
-            [clj-time.core       :as time   ]
-            [clj-time.format     :as tfmt   ]
-            [taoensso.carmine    :as car    ]
-            [twitter.oauth       :as oauth  ]
-            [twitter.api.restful :as twitter]
-            [seathree.data       :as data   ]))
+  (:require [clojure.test          :refer :all]
+            [seathree.test.helpers :refer :all]
+            [clojure.java.shell    :refer [sh]]
+            [clj-time.core         :as time   ]
+            [clj-time.format       :as tfmt   ]
+            [taoensso.carmine      :as car    ]
+            [twitter.oauth         :as oauth  ]
+            [twitter.api.restful   :as twitter]
+            [seathree.data         :as data   ]))
 
 (def user-data {:username "nate_smith" :src "en" :tgt "es"})
-(def _ nil)
-(defn fn-lift [value] (fn [& args] value))
-(def nil-fn (fn-lift nil))
-(def true-fn (fn-lift true))
-(def false-fn (fn-lift false))
 
 (deftest process-failed?
   (testing "process failed"

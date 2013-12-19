@@ -1,48 +1,62 @@
 (ns seathree.handler
   (:gen-class)
-  (require [clj-time.core :as time]
-           [clojure.tools.nrepl.server :as nrsrv]
-           [compojure.core :refer :all]
-           [cheshire.core :as json]
-           [ring.adapter.jetty :refer (run-jetty)]
-           [ring.middleware.gzip :refer :all]
-           [ring.util.response :refer [response]]
-           [taoensso.timbre :as log]
-           [seathree.config :as cfg]
-           [seathree.data :as data]
-           [seathree.routes :as routes]))
+  (:require [clojure.tools.nrepl.server :as nrsrv         ]
+            [compojure.core             :refer :all       ]
+            [cheshire.core              :as json          ]
+            [ring.adapter.jetty         :refer (run-jetty)]
+            [ring.middleware.gzip       :refer :all       ]
+            [ring.middleware.json       :refer :all       ]
+            [ring.util.response         :refer [response] ]
+            [taoensso.timbre            :as log           ]
+            [seathree.config            :as cfg           ]
+            [seathree.data              :as data          ]
+            [seathree.routes                              ]))
 
 (declare config)
-(def default-cfg-path "resources/secrets.clj")
+(def default-host "localhost")
+(def default-port 8888)
+(def default-cfg-file "resources/secrets.clj")
+(def default-log-file "/tmp/C3.log")
 
-(defroutes routes
-    (GET "/tweets-for-user" [user-data] (response (routes/tweets config (json/parse-string true user-data))))
+(defroutes router
+    (GET "/tweets-for-user" [user-data] (response (seathree.routes/tweets config (json/parse-string true user-data))))
     (GET "/tweets-for-many" [user-data-list] (response
-                                              (map (partial routes/tweets config)
+                                              (map (partial seathree.routes/tweets config)
                                                    (json/parse-string true user-data-list)))))
 
 (def app
-  (-> routes
+  (-> router
       (wrap-json-response)
       (wrap-gzip)))
 
+(defn get-arg
+  "Pull args from maps of the form {\":cli-keyword-arg\" \"value\"
+   with optional default"
+  [args arg & [default]]
+  (or (get args (format "%s" arg)) default))
+
+(defn guarded-int [string]
+  (if (nil? string)
+    nil
+    (Integer. string)))
+
 (defn -main
   [& args]
-  (let [args     (apply array-map args)
-        host     (or (get args ":host") "localhost")
-        port     (Integer. (or (get args ":port") 8888))
-        ws-port  (Integer. (or (get args ":ws-port") 8889))
-        cfg-path (or (get args ":config") default-cfg-path)
-        log-file (or (get args ":log-file") "/tmp/C3.log")]
+  (let [get-arg    (partial get-arg (apply array-map args))
+        port       (guarded-int (get-arg :port default-port))
+        nrepl-port (guarded-int (get-arg :nrepl-port))
+        host       (get-arg :host default-host)
+        cfg-file   (get-arg :config default-cfg-file)
+        log-file   (get-arg :log-file default-log-file)]
 
-    (log/info "STARTUP: Reading config")
-    (defonce config (cfg/get-cfg cfg-path))
+    ;(log/info "STARTUP: Reading config")
+    (def config (cfg/get-cfg cfg-file))
 
-    (log/info "STARTUP: starting jetty on" host "port" port)
+    ;(log/info "STARTUP: starting jetty on" host "port" port)
     (run-jetty app {:port port :host host :join? false})
 
-    (log/info "STARTUP: starting nrepl")
-    (defonce server (nrsrv/start-server :port 3333))))
+    (if nrepl-port ;(log/info "STARTUP: starting nrepl")
+      (def server (nrsrv/start-server :port nrepl-port)))))
 
 
            
