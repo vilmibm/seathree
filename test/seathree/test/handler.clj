@@ -7,6 +7,10 @@
             [seathree.config            :as cfg           ]
             [seathree.handler           :as handler       ]))
 
+(deftest process-params
+  (let [params {"data" "[{\"hi\": \"there\"}]"}]
+    (is (= [{:hi "there"}] (handler/process-params params)))))
+
 (deftest get-arg
   (let [args {":hi" "there" ":you" "guys"}]
     (testing "returns default if nil and default provided"

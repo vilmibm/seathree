@@ -6,6 +6,7 @@
             [ring.adapter.jetty         :refer (run-jetty)]
             [ring.middleware.gzip       :refer :all       ]
             [ring.middleware.json       :refer :all       ]
+            [ring.middleware.params     :refer :all       ]
             [ring.util.response         :refer [response] ]
             [taoensso.timbre            :as log           ]
             [seathree.config            :as cfg           ]
@@ -18,14 +19,21 @@
 (def default-cfg-file "resources/secrets.clj")
 (def default-log-file "/tmp/C3.log")
 
+(defn process-params [params]
+  (json/parse-string (get params "data") true))
+
 (defroutes router
-    (GET "/tweets-for-user" [user-data] (response (seathree.routes/tweets config (json/parse-string true user-data))))
-    (GET "/tweets-for-many" [user-data-list] (response
-                                              (map (partial seathree.routes/tweets config)
-                                                   (json/parse-string true user-data-list)))))
+  ;; Expects ?data="{\"username\"=\"foo\",...}"
+  (GET "/tweets-for-user" [:as {p :params}] (response
+                                             (seathree.routes/tweets config (process-params p))))
+                                                            
+  ;; Expects ?data="[{\"username\"=\"foo\",...},...]"
+  (GET "/tweets-for-many" [:as {p :params}] (response
+                                             (map (partial seathree.routes/tweets config) (process-params p)))))
 
 (def app
   (-> router
+      (wrap-params)
       (wrap-json-response)
       (wrap-gzip)))
 
