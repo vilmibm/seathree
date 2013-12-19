@@ -49,14 +49,20 @@
         cfg-file   (get-arg :config default-cfg-file)
         log-file   (get-arg :log-file default-log-file)]
 
-    ;(log/info "STARTUP: Reading config")
+    (log/set-config! [:timestamp-pattern] "yyyy-MM-dd HH:mm:ss ZZ")
+    (log/set-config! [:appenders :spit :enabled?] true)
+    (log/set-config! [:shared-appender-config :spit-filename] log-file)
+    
+    (log/info "STARTUP: Reading config")
     (def config (cfg/get-cfg cfg-file))
 
-    ;(log/info "STARTUP: starting jetty on" host "port" port)
+    (log/info "STARTUP: starting jetty on" host "port" port)
     (run-jetty app {:port port :host host :join? false})
 
-    (if nrepl-port ;(log/info "STARTUP: starting nrepl")
-      (def server (nrsrv/start-server :port nrepl-port)))))
+    (if nrepl-port
+      (do
+        (log/info "STARTUP: starting nrepl")
+        (def server (nrsrv/start-server :port nrepl-port))))))
 
 
            
