@@ -1,11 +1,12 @@
 (ns seathree.test.data
-  (:require [clojure.test :refer :all]
-            [clojure.java.shell :refer [sh]]
-            [clj-time.core :as time]
-            [clj-time.format :as tfmt]
-            [taoensso.carmine :as car]
-            [twitter.oauth :as oauth]
-            [seathree.data :as data]))
+  (:require [clojure.test        :refer :all]
+            [clojure.java.shell  :refer [sh]]
+            [clj-time.core       :as time   ]
+            [clj-time.format     :as tfmt   ]
+            [taoensso.carmine    :as car    ]
+            [twitter.oauth       :as oauth  ]
+            [twitter.api.restful :as twitter]
+            [seathree.data       :as data   ]))
 
 (def user-data {:username "nate_smith" :src "en" :tgt "es"})
 (def _ nil)
@@ -192,7 +193,41 @@
         (is (= result "hola"))))))
 
 (deftest get-tweets-from-twitter
-  (testing "when twitter fails")
-  (testing "when twitter suceeeds")
-  (testing "with last-tweet-id")
-  (testing "without last-tweet-id"))
+  (testing "when twitter fails"
+    (let [twitter-called (atom false)]
+      (with-redefs [twitter/statuses-user-timeline (fn [& a]
+                                                     (swap! twitter-called true-fn)
+                                                     {:status {:code 403}})
+                    data/twitter-creds-from-cfg    nil-fn]
+        (let [result (data/get-tweets-from-twitter _ user-data)]
+          (is (= @twitter-called true))
+          (is (= result nil))))))
+
+  (testing "when twitter suceeeds"
+    (with-redefs [twitter/statuses-user-timeline (fn [& a]
+                                                   {:status {:code 20}
+                                                    :body [{:text "hi"}
+                                                           {:text "there"}
+                                                           {:text "how"}]})
+                  data/twitter-creds-from-cfg    nil-fn]
+      (let [result (data/get-tweets-from-twitter _ user-data)]
+        (is (= result ["hi" "there" "how"])))))
+
+  (testing "twitter is sent proper arguments"
+    (testing "with last-tweet-id"
+    (let [twitter-args (atom [])]
+      (with-redefs [twitter/statuses-user-timeline (fn [& a]
+                                                     (swap! twitter-args (fn-lift a))
+                                                     {:status {:code 403}})
+                    data/twitter-creds-from-cfg (fn-lift "oauth-creds")]
+        (data/get-tweets-from-twitter _ user-data 123)
+        (is (= @twitter-args [:oauth-creds "oauth-creds" :params {:since-id 123 :screen-name "nate_smith" :include-rts false}])))))
+        
+    (testing "without last-tweet-id"
+      (let [twitter-args (atom [])]
+        (with-redefs [twitter/statuses-user-timeline (fn [& a]
+                                                       (swap! twitter-args (fn-lift a))
+                                                       {:status {:code 403}})
+                      data/twitter-creds-from-cfg (fn-lift "oauth-creds")]
+          (data/get-tweets-from-twitter _ user-data)
+          (is (= @twitter-args [:oauth-creds "oauth-creds" :params {:screen-name "nate_smith" :include-rts false}])))))))
