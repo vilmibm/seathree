@@ -34,10 +34,6 @@
         cfg-path (or (get args ":config") default-cfg-path)
         log-file (or (get args ":log-file") "/tmp/C3.log")]
 
-    (log/set-config! [:timestamp-pattern] "yyyy-MM-dd HH:mm:ss ZZ")
-    (log/set-config! [:appenders :spit :enabled?] true)
-    (log/set-config! [:shared-appender-config :spit-filename] log-file)
-
     (log/info "STARTUP: Reading config")
     (defonce config (cfg/get-cfg cfg-path))
 
