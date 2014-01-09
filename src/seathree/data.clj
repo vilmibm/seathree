@@ -1,18 +1,22 @@
 (ns seathree.data
   (require [clojure.string       :as str              ]
-           [clojure.java.shell   :refer [sh]          ]
+           [cheshire.core        :as json             ]
+           [clj-http.client      :as http-client      ]
            [clj-time.core        :as time             ]
            [clj-time.format      :as tfmt             ]
            [taoensso.carmine     :as car :refer (wcar)]
+           [taoensso.timbre      :as log              ]
            [twitter.oauth        :as oauth            ]
            [twitter.api.restful  :as twitter          ]))
-           
+
 (def stale (time/minutes 5))
+(def translate-url "https://www.googleapis.com/language/translate/v2")
 
 (defn redis
   "Function-based wrapper around redis API. A macro would be nicer but
    I'm not sure how to mock out macros for tests."
   [cfg function]
+  (log/debug "calling redis")
   (wcar {:pool {} :spec (select-keys (:redis cfg) [:host :port])}
         (function)))
 
@@ -43,8 +47,10 @@
         response      (twitter/statuses-user-timeline :oauth-creds creds :params params)
         status-string (format "%d" (:code (:status response)))]
     (condp match status-string
-      #"^[45]" nil
-      #"^2"    (map :text (:body response)))))
+      #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
+                   nil)
+      #"^2"    (do (log/debug "Got tweets from twitter for " user-data)
+                   (map :text (:body response))))))
 
 ;; Keys for storing data in Redis. Transformations on user-data maps.
 
@@ -59,14 +65,14 @@
 
 (def formatter (tfmt/formatters :basic-date-time))
 
-(defn store-ts! 
+(defn store-ts!
   "For the given key function, user-data, and optional timestamp,
    store the timestamp in Redis. If no timestamp is provided, time/now
    is used."
   [cfg key-fn user-data & [timestamp]]
   (let [key       (key-fn user-data)
         timestamp (or timestamp (time/now))]
-    (redis cfg #(car/set key (tfmt/unparse formatter timestamp))))) 
+    (redis cfg #(car/set key (tfmt/unparse formatter timestamp)))))
 
 (defn get-ts
   "For the given key function and user-data, return the stored
@@ -74,10 +80,10 @@
   [cfg key-fn user-data]
   (let [key       (key-fn user-data)
         ts-string (redis cfg #(car/get key))]
-    (if (nil? ts-string) 
-      (time/minus (time/now) (time/years 1000)) 
+    (if (nil? ts-string)
+      (time/minus (time/now) (time/years 1000))
       (tfmt/parse formatter ts-string))))
-  
+
 (defn with-retries [retries function]
   (if (> retries 0)
     (loop [retries-left retries]
@@ -86,31 +92,44 @@
           (if (> retries-left 0) (recur (dec retries-left)) nil)
           result)))))
 
+(defn extract-translation
+  "Given a 200 response from the google translate API, pull out the
+   first translation."
+  [response]
+  (let [data (json/parse-string (:body response) true)]
+    (:translatedText (first (:translations (:data data))))))
+
+
 (defn translate
-  "Given a user-data map and a single tweet's text, spawn a python
-   interpreter to talk to the Google Translate API."
+  "Given a user-data map and a single tweet's text, make a GET request
+   to the google translate API."
   [cfg user-data text]
-  (let [key    (:key (:google cfg))
-        src    (:src user-data)
-        tgt    (:tgt user-data)
-        text   (format "'%s'" text)
-        result (sh "python" "resources/python/translate.py" key src tgt text)]
-      (if (process-failed? result)
-        nil
-        (str/trim-newline (:out result)))))
+  (let [key           (:key (:google cfg))
+        src           (:src user-data)
+        tgt           (:tgt user-data)
+        result        (http-client/get translate-url {:query-params {"key" key "source" src "target" tgt "q" text}})
+        status-string (.toString (Integer. (:status result)))]
+    (condp match status-string
+      #"^[45]" (do (log/debug "Got " status-string "from google for " user-data)
+                   nil)
+      #"^2"    (do (log/debug "Got translation from google for " user-data)
+                   (extract-translation result)))))
 
 (defn refresh-tweets!
   "Actually ask for new tweets from twitter for the given user map. If
    we see new tweets, translate and store them. Spawns a thread."
   [cfg user-data]
+  (log/debug "Spawning refresh thread for " user-data)
   ;; Spawn a thread to do this work since it involves Redis, Twitter
   ;; and Google.
-  (future 
+  (future
+    (log/debug "Refreshing... " user-data)
     ;; First, get the timestamp for the last time these tweets were
     ;; refreshed. We might not have to do any work.
     (let [last-refresh (get-ts cfg refresh-key user-data)]
       (if (time/before? last-refresh (time/minus (time/now) stale))
         (do
+          (log/debug "Tweets are stale for" user-data)
           ;; Second, update the last refresh timestamp for the given
           ;; user data map. That way, if another thread attempts to run
           ;; this update it will stop and not duplicate effort.
@@ -120,13 +139,15 @@
           ;; tweets after this tweet's id)
           (let [last-tweet-id     (:id (redis cfg #(car/lindex (tweets-key user-data) 0)))
                 tweets            (with-retries 3 #(get-tweets-from-twitter cfg user-data last-tweet-id))]
+            (log/debug tweets)
             (if (not (nil? tweets))
               (let [retrying-translate (fn [text] (with-retries 3 #(translate cfg user-data text)))
                     translated-tweets  (->> tweets
                                             (map retrying-translate)
                                             (filter #(not (nil? %))))]
                 (if (not (empty? translated-tweets))
-                    (redis cfg #(car/lpush (tweets-key user-data) translated-tweets)))))))))))
+                    (redis cfg #(car/lpush (tweets-key user-data) translated-tweets))
+                    (log/debug "Failed to translate any tweets"))))))))))
 
 ;; TODO why does this assoc user-data? It should just return a list of
 ;;      tweets like get-tweets-from-twitter.
@@ -137,5 +158,3 @@
   (let [num-tweets        (redis cfg #(car/llen (tweets-key user-data)))
         translated-tweets (redis cfg #(car/lrange (tweets-key user-data) 0 num-tweets))]
     (assoc user-data :tweets translated-tweets)))
-
-

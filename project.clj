@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.nrepl "0.2.3"]
                  [clj-time "0.5.1"]
+                 [clj-http "0.7.8"]
                  [com.taoensso/carmine "2.0.0-beta2"]
                  [ring "1.2.0-RC1"]
                  [amalloy/ring-gzip-middleware "0.1.2"]
