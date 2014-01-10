@@ -99,7 +99,61 @@
   (let [data (json/parse-string (:body response) true)]
     (:translatedText (first (:translations (:data data))))))
 
+(defn mk-sigil
+    "
+    Create a sigil used to replace Twitter symbols like
+    @replies. Necessary to preserve symbols across trips to
+    google. Also cuts down on google character usage. Got to save
+    dollars.
 
+    Takes an int, returns a string like `xz0`.
+    "
+    [c]
+    (format "XZ%d" c))
+  
+(defn mark-sigils
+    "Replace special forms within a tweet with ordered sigils so
+    they can be restored later. For example,
+
+    Este cerveza esta sabrosa #cerveza http://bit.ly/foo @friend
+
+    will be transformed into
+
+    Este cerveza esta sabrosa XZ1 XZ2 XZ3
+
+    (these will be later reconstructed).
+
+    Returns a tuple of a marked string and a listing of symbols that
+    were replaced with sigils."
+    [raw-text]
+    (let [symbol-re #"(\@\w+|http:\/\/[^ ]+|\#\w+)"
+          symbols   (re-seq symbol-re raw-text)]
+      (loop [c           0
+             marked-text raw-text
+             ss          symbols]
+        (if (empty? ss)
+          marked-text
+          (recur (inc c)
+                 (str/replace marked-text (first ss) (mk-sigl c))
+                 (rest ss))))))
+
+(defn restore-sigils
+    "
+    Restore a list of symbols to their placeholders. Accepts the
+    output of `mark-sigils`.
+    "
+    [marked-text symbols]
+    (loop [c             0
+           restored-text marked-text
+           ss            symbols]
+      (if (empty? ss)
+        restored-text
+        (recur (inc c)
+               (str/replace restored-text (mk-sigil c) (first ss))
+               (rest ss)))))
+
+;; TODO TEST SIGILS, USE SIGILS
+          
 (defn translate
   "Given a user-data map and a single tweet's text, make a GET request
    to the google translate API."
