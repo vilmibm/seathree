@@ -20,6 +20,7 @@
   var List = function (name, users) {
     this.name = name;
     this.users = users;
+    this.selected = false;
   };
 
   var User = function (username, src, tgt) {
@@ -42,7 +43,7 @@
     ])
   ];
 
-  lists.push(new List('All', lists.
+  lists.unshift(new List('All', lists.
       map(function (list) {return list.users;}).
       reduce(function (userList0, userList1) {
              return userList0.concat(userList1);
@@ -67,7 +68,16 @@
 
   controller('TweetsCtrl', function ($scope, $http, $interval) {
     $scope.lists = lists;
-    $scope.selectedLists = [];
+
+    $scope.toggleListAt = function (index) {
+      lists[index].selected = !lists[index].selected;
+    };
+
+    $scope.isSelected = function (list) {
+      return list.selected == true;
+    };
+
+    // TODO restore selected lists from localStorage
     // TODO setup polling interval
   }).
 
