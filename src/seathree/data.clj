@@ -154,8 +154,6 @@
                (str/replace restored-text (mk-sigil c) (first ss))
                (rest ss)))))
 
-;; TODO TEST SIGILS, USE SIGILS
-          
 (defn translate
   "Given a user-data map and a single tweet's text, make a GET request
    to the google translate API."
