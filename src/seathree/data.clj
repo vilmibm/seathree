@@ -12,6 +12,8 @@
 (def stale (time/minutes 5))
 (def translate-url "https://www.googleapis.com/language/translate/v2")
 
+(defn to-string [int] (format "%d" int))
+
 (defn redis
   "Function-based wrapper around redis API. A macro would be nicer but
    I'm not sure how to mock out macros for tests."
@@ -45,7 +47,7 @@
         basic-params  {:screen-name (:username user-data) :include-rts false}
         params        (if last-tweet-id (assoc basic-params :since-id last-tweet-id) basic-params)
         response      (twitter/statuses-user-timeline :oauth-creds creds :params params)
-        status-string (format "%d" (:code (:status response)))]
+        status-string (to-string (:code (:status response)))]
     (condp match status-string
       #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
                    nil)
@@ -126,15 +128,15 @@
     Returns a tuple of a marked string and a listing of symbols that
     were replaced with sigils."
     [raw-text]
-    (let [symbol-re #"(\@\w+|http:\/\/[^ ]+|\#\w+)"
+    (let [symbol-re #"\@\w+|http:\/\/[^ ]+|\#\w+"
           symbols   (re-seq symbol-re raw-text)]
       (loop [c           0
              marked-text raw-text
              ss          symbols]
         (if (empty? ss)
-          marked-text
+          [marked-text symbols]
           (recur (inc c)
-                 (str/replace marked-text (first ss) (mk-sigl c))
+                 (str/replace marked-text (first ss) (mk-sigil c))
                  (rest ss))))))
 
 (defn restore-sigils
@@ -158,16 +160,21 @@
   "Given a user-data map and a single tweet's text, make a GET request
    to the google translate API."
   [cfg user-data text]
-  (let [key           (:key (:google cfg))
-        src           (:src user-data)
-        tgt           (:tgt user-data)
-        result        (http-client/get translate-url {:query-params {"key" key "source" src "target" tgt "q" text}})
-        status-string (.toString (Integer. (:status result)))]
+  (let [key                   (:key (:google cfg))
+        src                   (:src user-data)
+        tgt                   (:tgt user-data)
+        [marked-text symbols] (mark-sigils text)
+        http-opts             {:query-params {"key" key "source" src "target" tgt "q" marked-text}}
+        result                (http-client/get translate-url http-opts)
+        status-string         (to-string (:status result))]
     (condp match status-string
       #"^[45]" (do (log/debug "Got " status-string "from google for " user-data)
                    nil)
       #"^2"    (do (log/debug "Got translation from google for " user-data)
-                   (extract-translation result)))))
+                   (-> result
+                       extract-translation
+                       (restore-sigils symbols)))
+      #"null"  nil)))
 
 (defn refresh-tweets!
   "Actually ask for new tweets from twitter for the given user map. If

@@ -1,15 +1,18 @@
 (ns seathree.test.data
-  (:require [clojure.test          :refer :all]
-            [seathree.test.helpers :refer :all]
-            [clojure.java.shell    :refer [sh]]
-            [clj-time.core         :as time   ]
-            [clj-time.format       :as tfmt   ]
-            [taoensso.carmine      :as car    ]
-            [twitter.oauth         :as oauth  ]
-            [twitter.api.restful   :as twitter]
-            [seathree.data         :as data   ]))
+  (:require [clojure.test          :refer :all    ]
+            [seathree.test.helpers :refer :all    ]
+            [cheshire.core         :as json       ]
+            [clj-http.client       :as http-client]
+            [clj-time.core         :as time       ]
+            [clj-time.format       :as tfmt       ]
+            [taoensso.carmine      :as car        ]
+            [twitter.oauth         :as oauth      ]
+            [twitter.api.restful   :as twitter    ]
+            [seathree.data         :as data       ]))
 
 (def user-data {:username "nate_smith" :src "en" :tgt "es"})
+(def google-response {:body   (json/generate-string {:data {:translations [{:translatedText "hello"}]}})
+                      :status 200})
 
 (deftest process-failed?
   (testing "process failed"
@@ -169,24 +172,38 @@
           (is (= true @translate-called))
           (is (= false @lpush-called)))))))
 
+(deftest mk-sigil
+  (is (= "XZ0" (data/mk-sigil 0))))
+
+(deftest extract-translation
+  (is (= "hello" (data/extract-translation google-response))))
+
+(deftest mark-sigils
+  (is (= ["XZ0 hello XZ1 guys XZ2 how" ["@joz" "#there" "http://foobar.com"]]
+         (data/mark-sigils "@joz hello #there guys http://foobar.com how"))))
+
+(deftest restore-sigils
+  (is (=  "@joz hello #there guys http://foobar.com how"
+          (data/restore-sigils "XZ0 hello XZ1 guys XZ2 how" ["@joz" "#there" "http://foobar.com"]))))
+                                                    
 (deftest translate
-  (testing "passes proper data to python"
-    (let [shell-args (atom [])]
-      (with-redefs [sh (fn [& a] (swap! shell-args (fn-lift a)) {:exit 1})]
-        (data/translate {:google {:key "foo"}} user-data "hi")
-        (is (= @shell-args ["python" "resources/python/translate.py" "foo" "en" "es" "'hi'"])))))
-  
+  (testing "proper query passed to get"
+    (let [get-opts (atom {})]
+      (with-redefs [http-client/get (fn [_ opts] (swap! get-opts (fn-lift opts)))]
+        (data/translate {:google {:key "foo"}} user-data "hello")
+        (is (= @get-opts {:query-params {"key" "foo" "source" "en" "target" "es" "q" "hello"}})))))
+
   (testing "when google fails"
-    (let [shell-called (atom false)]
-      (with-redefs [sh (fn [& a] (swap! shell-called true-fn) {:exit 1})]
+    (let [get-called (atom false)]
+      (with-redefs [http-client/get (fn [& a] (swap! get-called true-fn) {:status 400})]
         (let [result (data/translate _ user-data "hello")]
-          (is (= @shell-called true))
+          (is (= @get-called true))
           (is (= result nil))))))
 
   (testing "when google succeeds"
-    (with-redefs [sh (fn-lift {:exit 0 :out "hola\n"})]
+    (with-redefs [http-client/get (fn-lift google-response)]
       (let [result (data/translate _ user-data "hi")]
-        (is (= result "hola"))))))
+        (is (= result "hello"))))))
 
 (deftest get-tweets-from-twitter
   (testing "when twitter fails"
