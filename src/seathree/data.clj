@@ -207,7 +207,7 @@
                                             (map retrying-translate)
                                             (filter #(not (nil? %))))]
                 (if (not (empty? translated-tweets))
-                    (redis cfg #(car/lpush (tweets-key user-data) translated-tweets))
+                    (redis cfg #(apply (partial car/lpush (tweets-key user-data)) translated-tweets))
                     (log/debug "Failed to translate any tweets"))))))))))
 
 ;; TODO why does this assoc user-data? It should just return a list of
