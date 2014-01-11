@@ -16,3 +16,4 @@ pom.xml.asc
 *secrets.clj
 *#*
 *.swp
+resources/web/app/bower_components
