@@ -17,13 +17,63 @@
 */
 (function (ng) {
 
+  var List = function (name, users) {
+    this.name = name;
+    this.users = users;
+  };
+
+  var User = function (username, src, tgt) {
+    this.username = username;
+    this.src = src || 'es';
+    this.tgt = tgt || 'tgt';
+    this.tweets = [];
+  };
+
+  var lists = [
+    new List('Mexico', [
+      new User('GobiernoDF')
+    ]),
+    new List('United States', [
+      new User('nate_smith', 'en', 'es')
+    ]),
+    new List('Organizations', [
+    ]),
+    new List('My List', [
+    ])
+  ];
+
+  lists.push(new List('All', lists.
+      map(function (list) {return list.users;}).
+      reduce(function (userList0, userList1) {
+             return userList0.concat(userList1);
+           }).
+      sort(function (user0, user1) {
+             if (user0.username < user1.username)
+               return -1;
+             if (user0.username > user1.username)
+               return 1;
+             return 0;
+           }).
+      reduce(function (list, user) {
+             if (list.length == 0)
+               list.push(user);
+             if (list[list.length-1].username != user.username)
+               list.push(user);
+             return list;
+           }, [])
+  ));
+
   ng.module('SeaThree', []).
 
-  controller('LanguageCtrl', function ($scope) {
-
+  controller('TweetsCtrl', function ($scope, $http, $interval) {
+    $scope.lists = lists;
+    $scope.selectedLists = [];
+    // TODO setup polling interval
   }).
 
-  controller('TweetsCtrl', function ($http, $scope) {
+  controller('LanguageCtrl', function ($scope) {
+    // TODO. Putting this off until I learn more about
+    // internationalization.
   });
 
 
