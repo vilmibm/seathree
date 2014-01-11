@@ -16,35 +16,29 @@
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 (function (ng) {
+  var List,
+      User,
+      refresh,
+      listsToUsers,
+      refreshInterval = 30000,
+      // TODO obviously this cannot be hardcoded.
+      seathreeUrl = 'http://localhost:8888/tweets-for-many';
 
-  var List = function (name, users) {
+  List = function (name, users) {
     this.name = name;
     this.users = users;
     this.selected = false;
   };
 
-  var User = function (username, src, tgt) {
+  User = function (username, src, tgt) {
     this.username = username;
     this.src = src || 'es';
     this.tgt = tgt || 'tgt';
     this.tweets = [];
   };
 
-  var lists = [
-    new List('Mexico', [
-      new User('GobiernoDF')
-    ]),
-    new List('United States', [
-      new User('nate_smith', 'en', 'es')
-    ]),
-    new List('Organizations', [
-    ]),
-    new List('My List', [
-    ])
-  ];
-
-  lists.unshift(new List('All', lists.
-      map(function (list) {return list.users;}).
+  listsToUsers = function (lists) {
+    return lists.map(function (list) {return list.users;}).
       reduce(function (userList0, userList1) {
              return userList0.concat(userList1);
            }).
@@ -61,12 +55,32 @@
              if (list[list.length-1].username != user.username)
                list.push(user);
              return list;
-           }, [])
-  ));
+           }, []);
+  };
+
+  refresh = function ($http, lists) {
+    var userList = listsToUsers(lists);
+    $http.get(seathree_url + '?data=' + JSON.stringify(userList)).success(function (data) {
+      // TODO need to distribute all of the user tweets into the various lists.
+    });
+  };
 
   ng.module('SeaThree', []).
 
   controller('TweetsCtrl', function ($scope, $http, $interval) {
+    var lists = [
+      new List('Mexico', [
+        new User('GobiernoDF')
+      ]),
+      new List('United States', [
+        new User('nate_smith', 'en', 'es')
+      ]),
+      new List('Organizations', []),
+      new List('My List', [])
+    ];
+    // TODO keep "All" updated as My List changes.
+    lists.unshift(new List('All', listsToUsers(lists)));
+
     $scope.lists = lists;
 
     $scope.toggleListAt = function (index) {
@@ -76,6 +90,12 @@
     $scope.isSelected = function (list) {
       return list.selected == true;
     };
+    $interval(function () {
+      refresh($http, lists.filter($scope.isSelected);
+
+    }, refreshInterval);
+
+    $interval(refresh.bind(null, $http, lists), 30000);
 
     // TODO restore selected lists from localStorage
     // TODO setup polling interval
