@@ -1,110 +1,78 @@
-/*
- SeaThree, Realtime Twitter Translations
- Copyright (C) 2014 Nathaniel Smith and Benjamin Valentine
+(function (ng, _) {
+  var SEATHREEURL   = 'http://localhost:8888/tweets-for-many',
+      FETCHINTERVAL = 5000;
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+  ng.module('SeaThree', [])
+  .controller('TweetsCtrl', function ($scope, $http, $interval) {
+    var findUser,
+        List,
+        fetch;
+    List = function (name, usernames) {
+      this.name = name;
+      this.usernames = usernames;
+      this.selected = false;
+      this.tweets = [];
+    };
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Affero General Public License for more details.
-
- You should have received a copy of the GNU Affero General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-(function (ng) {
-  var List,
-      User,
-      refresh,
-      listsToUsers,
-      refreshInterval = 30000,
-      // TODO obviously this cannot be hardcoded.
-      seathreeUrl = 'http://localhost:8888/tweets-for-many';
-
-  List = function (name, users) {
-    this.name = name;
-    this.users = users;
-    this.selected = false;
-  };
-
-  User = function (username, src, tgt) {
-    this.username = username;
-    this.src = src || 'es';
-    this.tgt = tgt || 'tgt';
-    this.tweets = [];
-  };
-
-  listsToUsers = function (lists) {
-    return lists.map(function (list) {return list.users;}).
-      reduce(function (userList0, userList1) {
-             return userList0.concat(userList1);
-           }).
-      sort(function (user0, user1) {
-             if (user0.username < user1.username)
-               return -1;
-             if (user0.username > user1.username)
-               return 1;
-             return 0;
-           }).
-      reduce(function (list, user) {
-             if (list.length == 0)
-               list.push(user);
-             if (list[list.length-1].username != user.username)
-               list.push(user);
-             return list;
-           }, []);
-  };
-
-  refresh = function ($http, lists) {
-    var userList = listsToUsers(lists);
-    $http.get(seathree_url + '?data=' + JSON.stringify(userList)).success(function (data) {
-      // TODO need to distribute all of the user tweets into the various lists.
-    });
-  };
-
-  ng.module('SeaThree', []).
-
-  controller('TweetsCtrl', function ($scope, $http, $interval) {
-    var lists = [
-      new List('Mexico', [
-        new User('GobiernoDF')
-      ]),
-      new List('United States', [
-        new User('nate_smith', 'en', 'es')
-      ]),
+    $scope.lists = [
+      new List('Mexico', ['GobiernoDF']),
+      new List('United States', ['nate_smith']),
       new List('Organizations', []),
       new List('My List', [])
     ];
-    // TODO keep "All" updated as My List changes.
-    lists.unshift(new List('All', listsToUsers(lists)));
+    $scope.lists.unshift(new List('All', _.chain($scope.lists)
+                                         .pluck('usernames')
+                                         .flatten()
+                                         .unique()
+                                         .value()));
 
-    $scope.lists = lists;
+    $scope.users = [{
+      username: 'GobiernoDF',
+      src: 'es',
+      tgt: 'en',
+      tweets: []
+    }, {
+      username: 'nate_smith',
+      src:'en',
+      tgt:'es',
+      twwets: []
+    }];
 
+    findUser = function (users, username) {
+      return _(users).find(function (user) {
+               return user.username === username;
+             });
+    };
+
+    $scope.isSelected = function (list) {return list.selected;};
     $scope.toggleListAt = function (index) {
-      lists[index].selected = !lists[index].selected;
+      $scope.lists[index].selected = !$scope.lists[index].selected;
     };
 
-    $scope.isSelected = function (list) {
-      return list.selected == true;
+    fetch = function () {
+      var data = _($scope.users).map(function (user) {
+                   return _(user).pick('username', 'src', 'tgt');
+                 });
+      $http.get(SEATHREEURL + '?data=' + JSON.stringify(data)).success(function (users) {
+        $scope.users = users;
+      });
     };
-    $interval(function () {
-      refresh($http, lists.filter($scope.isSelected);
 
-    }, refreshInterval);
+    $scope.$watch('users', function () {
+      // When users is updated, we must update the lists.
+      _($scope.lists).each(function (list) {
+        var tweets = _(list.usernames).map(function (username) {
+          return findUser($scope.users, username).tweets;
+        });
+        list.tweets = _(tweets).flatten();
+      });
+    });
 
-    $interval(refresh.bind(null, $http, lists), 30000);
-
-    // TODO restore selected lists from localStorage
-    // TODO setup polling interval
-  }).
-
-  controller('LanguageCtrl', function ($scope) {
-    // TODO. Putting this off until I learn more about
-    // internationalization.
+    // Start polling.
+    $interval(fetch, FETCHINTERVAL);
+  })
+  .controller('LanguageCtrl', function ($scope) {
+    // TODO
   });
 
-
-})(angular);
+})(angular, _);
