@@ -23,6 +23,7 @@
             [ring.middleware.gzip       :refer :all       ]
             [ring.middleware.json       :refer :all       ]
             [ring.middleware.params     :refer :all       ]
+            [ring.middleware.cors       :refer [wrap-cors]]
             [ring.util.response         :refer [response] ]
             [taoensso.timbre            :as log           ]
             [seathree.config            :as cfg           ]
@@ -51,6 +52,8 @@
 
 (def app
   (-> router
+      (wrap-cors
+       :access-control-allow-origin #".*")
       (wrap-params)
       (wrap-json-response)
       (wrap-gzip)))
