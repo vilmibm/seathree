@@ -55,6 +55,12 @@
 
 (defn match [re s] (not (nil? (re-seq re s))))
 
+(defn extract-tweet
+  "Pulls only the keys we care about from a tweet from twitter"
+  [tweet]
+  (select-keys tweet [:text :id :created_at]))
+ 
+
 (defn get-tweets-from-twitter
   "Ask the Twitter API for tweets for the given user-data map. Fetches
    up until last-tweet-id if present; if nil, fetches last 20 tweets."
@@ -68,7 +74,7 @@
       #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
                    nil)
       #"^2"    (do (log/debug "Got tweets from twitter for " user-data)
-                   (map :text (:body response))))))
+                   (map extract-tweet (:body response))))))
 
 ;; Keys for storing data in Redis. Transformations on user-data maps.
 
@@ -173,11 +179,11 @@
 (defn translate
   "Given a user-data map and a single tweet's text, make a GET request
    to the google translate API."
-  [cfg user-data text]
+  [cfg user-data tweet]
   (let [key                   (:key (:google cfg))
         src                   (:src user-data)
         tgt                   (:tgt user-data)
-        [marked-text symbols] (mark-sigils text)
+        [marked-text symbols] (mark-sigils (:text tweet))
         http-opts             {:query-params {"key" key "source" src "target" tgt "q" marked-text}}
         result                (http-client/get translate-url http-opts)
         status-string         (to-string (:status result))]
@@ -185,9 +191,9 @@
       #"^[45]" (do (log/debug "Got " status-string "from google for " user-data)
                    nil)
       #"^2"    (do (log/debug "Got translation from google for " user-data)
-                   (-> result
-                       extract-translation
-                       (restore-sigils symbols)))
+                   (assoc tweet :translated (-> result
+                                                extract-translation
+                                                (restore-sigils symbols))))
       #"null"  nil)))
 
 (defn refresh-tweets!
@@ -224,12 +230,8 @@
                     (redis cfg #(apply (partial car/lpush (tweets-key user-data)) translated-tweets))
                     (log/debug "Failed to translate any tweets"))))))))))
 
-;; TODO why does this assoc user-data? It should just return a list of
-;;      tweets like get-tweets-from-twitter.
 (defn get-tweets-from-cache
   "Pull out and return all tweet data for the requested user
    map. Assocs tweet list with user data."
   [cfg user-data]
-  (let [num-tweets        (redis cfg #(car/llen (tweets-key user-data)))
-        translated-tweets (redis cfg #(car/lrange (tweets-key user-data) 0 num-tweets))]
-    (assoc user-data :tweets translated-tweets)))
+  (redis cfg #(car/lrange (tweets-key user-data) 0 -1)))

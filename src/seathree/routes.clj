@@ -26,4 +26,4 @@
   (let [tweets (get-tweets-from-cache cfg user-data)]
     (log/debug "got tweets:" tweets)
     (refresh-tweets! cfg user-data)
-    tweets))
+    (assoc user-data :tweets tweets)))
