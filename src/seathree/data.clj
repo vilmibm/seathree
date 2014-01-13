@@ -58,7 +58,11 @@
 (defn extract-tweet
   "Pulls only the keys we care about from a tweet from twitter"
   [tweet]
-  (select-keys tweet [:text :id :created_at]))
+  (let [username    (:screen_name (:user tweet))
+        displayname (:name (:user tweet))
+        tweet       (select-keys tweet [:text :id :created_at])]
+    (assoc tweet :username username)
+    (assoc tweet :displayname displayname)))
  
 
 (defn get-tweets-from-twitter
