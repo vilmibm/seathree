@@ -64,7 +64,7 @@
         var tweets = _(list.usernames).map(function (username) {
           return findUser($scope.users, username).tweets;
         });
-        list.tweets = _(tweets).flatten();
+        list.tweets = _(_(tweets).flatten()).sortBy('created_at');
       });
     });
 
