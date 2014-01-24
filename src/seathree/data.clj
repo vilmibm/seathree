@@ -213,8 +213,8 @@
 (defn store-tweets [cfg user-data tweets]
   (let [tkey    (tweets-key user-data)
         last-id (:id (redis cfg #(car/lindex tkey 0)))
-        tweets  (if last-id (filter (partial < last-id) tweets) tweets)]
-    (redis cfg #(apply (partial car/lpush tkey) tweets))))
+        tweets  (if last-id (filter #(< last-id (:id %)) tweets) tweets)]
+    (redis cfg #(apply (partial car/lpush tkey) (reverse tweets)))))
     
 (defn refresh-tweets!
   "Actually ask for new tweets from twitter for the given user map. If
