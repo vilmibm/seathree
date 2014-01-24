@@ -40,12 +40,12 @@
   (json/parse-string (get params "data") true))
 
 (defroutes router
-  ;; Expects ?data="{\"username\"=\"foo\",...}"
+  ;; Expects ?data="{\"username\":\"foo\",...}"
   (GET "/tweets-for-user" [:as {p :params}]
        (log/info "request:" p)
        (response (seathree.routes/tweets config (process-params p))))
                                                             
-  ;; Expects ?data="[{\"username\"=\"foo\",...},...]"
+  ;; Expects ?data="[{\"username\":\"foo\",...},...]"
   (GET "/tweets-for-many" [:as {p :params}]
        (log/info "request:" p)
        (response (map (partial seathree.routes/tweets config) (process-params p))))) 

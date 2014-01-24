@@ -46,39 +46,7 @@
 
 (defn process-failed? [result] (> (:exit result) 0))
 
-(defn twitter-creds-from-cfg
-  "Given a seathree config map, produce twitter oauth credentials."
-  [cfg]
-  (let [creds (:oauth (:twitter cfg))]
-    (apply oauth/make-oauth-creds (map #(% creds) [:consumer-key :consumer-secret
-                                                   :access-token :access-token-secret]))))
-
 (defn match [re s] (not (nil? (re-seq re s))))
-
-(defn extract-tweet
-  "Pulls only the keys we care about from a tweet from twitter"
-  [tweet]
-  (let [username    (:screen_name (:user tweet))
-        displayname (:name (:user tweet))
-        tweet       (select-keys tweet [:text :id :created_at])]
-    (assoc tweet :username username)
-    (assoc tweet :displayname displayname)))
- 
-
-(defn get-tweets-from-twitter
-  "Ask the Twitter API for tweets for the given user-data map. Fetches
-   up until last-tweet-id if present; if nil, fetches last 20 tweets."
-  [cfg user-data & [last-tweet-id]]
-  (let [creds         (twitter-creds-from-cfg cfg)
-        basic-params  {:screen-name (:username user-data) :include-rts false}
-        params        (if last-tweet-id (assoc basic-params :since-id last-tweet-id) basic-params)
-        response      (twitter/statuses-user-timeline :oauth-creds creds :params params)
-        status-string (to-string (:code (:status response)))]
-    (condp match status-string
-      #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
-                   nil)
-      #"^2"    (do (log/debug "Got tweets from twitter for " user-data)
-                   (map extract-tweet (:body response))))))
 
 ;; Keys for storing data in Redis. Transformations on user-data maps.
 
@@ -200,6 +168,54 @@
                                                 (restore-sigils symbols))))
       #"null"  nil)))
 
+(defn twitter-creds-from-cfg
+  "Given a seathree config map, produce twitter oauth credentials."
+  [cfg]
+  (let [creds (:oauth (:twitter cfg))]
+    (apply oauth/make-oauth-creds (map #(% creds) [:consumer-key :consumer-secret
+                                                   :access-token :access-token-secret]))))
+
+
+(defn extract-tweet
+  "Pulls only the keys we care about from a tweet from twitter"
+  [tweet]
+  (let [username    (:screen_name (:user tweet))
+        displayname (:name (:user tweet))
+        tweet       (select-keys tweet [:text :id :created_at])]
+    (assoc tweet :username username)
+    (assoc tweet :displayname displayname)))
+ 
+(defn get-tweets-from-twitter
+  "Ask the Twitter API for tweets for the given user-data map. Fetches
+   up until last-tweet-id if present; if nil, fetches last 20 tweets."
+  [cfg user-data & [last-tweet-id]]
+  (log/debug "Calling Twitter API for" user-data last-tweet-id)
+  (let [creds         (twitter-creds-from-cfg cfg)
+        basic-params  {:screen-name (:username user-data) :include-rts false}
+        params        (if last-tweet-id (assoc basic-params :since-id last-tweet-id) basic-params)
+        response      (twitter/statuses-user-timeline :oauth-creds creds :params params)
+        status-string (to-string (:code (:status response)))]
+    (condp match status-string
+      #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
+                   nil)
+      #"^2"    (do (log/debug "Got tweets from twitter for " user-data)
+                   (map extract-tweet (:body response))))))
+
+(defn get-tweets-from-cache
+  "Pull out and return all tweet data for the requested user
+   map. Assocs tweet list with user data."
+  [cfg user-data & [since-id]]
+  (let [tweets (redis cfg #(car/lrange (tweets-key user-data) 0 -1))]
+    (if since-id
+      (take-while #(not (= (:id %) since-id)) tweets)
+      tweets)))
+
+(defn store-tweets [cfg user-data tweets]
+  (let [tkey    (tweets-key user-data)
+        last-id (:id (redis cfg #(car/lindex tkey 0)))
+        tweets  (if last-id (filter (partial < last-id) tweets) tweets)]
+    (redis cfg #(apply (partial car/lpush tkey) tweets))))
+    
 (defn refresh-tweets!
   "Actually ask for new tweets from twitter for the given user map. If
    we see new tweets, translate and store them. Spawns a thread."

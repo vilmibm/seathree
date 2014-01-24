@@ -15,7 +15,7 @@
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns seathree.routes
-  (require [seathree.data   :refer :all]
+  (require [seathree.data   :as data   ]
            [taoensso.timbre :as log    ]))
 
 (defn tweets 
@@ -23,7 +23,7 @@
    twitter's API."
   [cfg user-data]
   (log/debug "Request for " user-data)
-  (let [tweets (get-tweets-from-cache cfg user-data)]
-    (log/debug "got tweets:" tweets)
-    (refresh-tweets! cfg user-data)
+  (let [since-id (:id user-data)
+        tweets   (data/get-tweets-from-cache cfg user-data since-id)]
+    (data/refresh-tweets! cfg user-data)
     (assoc user-data :tweets tweets)))
