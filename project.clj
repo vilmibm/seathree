@@ -14,7 +14,7 @@
                  [ring/ring-json "0.2.0"]
                  [ring-cors "0.1.0"]
                  [ring-server "0.2.8"]
-                 [twitter-api "0.7.4"]]
+                 [twitter-api "0.7.5"]]
   :plugins [[lein-ring "0.8.5"]]
   :main seathree.handler
   :ring {:handler seathree.handler/app})
