@@ -240,18 +240,11 @@
           ;; tweets after this tweet's id)
           (let [last-tweet-id     (:id (redis cfg #(car/lindex (tweets-key user-data) 0)))
                 tweets            (with-retries 3 #(get-tweets-from-twitter cfg user-data last-tweet-id))]
-            (log/debug tweets)
             (if (not (nil? tweets))
               (let [retrying-translate (fn [text] (with-retries 3 #(translate cfg user-data text)))
                     translated-tweets  (->> tweets
                                             (map retrying-translate)
                                             (filter #(not (nil? %))))]
                 (if (not (empty? translated-tweets))
-                    (redis cfg #(apply (partial car/lpush (tweets-key user-data)) translated-tweets))
-                    (log/debug "Failed to translate any tweets"))))))))))
-
-(defn get-tweets-from-cache
-  "Pull out and return all tweet data for the requested user
-   map. Assocs tweet list with user data."
-  [cfg user-data]
-  (redis cfg #(car/lrange (tweets-key user-data) 0 -1)))
+                  (store-tweets cfg user-data translated-tweets)
+                  (log/debug "Failed to translate any tweets"))))))))))
