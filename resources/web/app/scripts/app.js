@@ -1,6 +1,6 @@
 (function (ng, _) {
   var SEATHREEURL   = 'http://localhost:8888/tweets-for-many',
-      FETCHINTERVAL = 5000;
+      FETCHINTERVAL = 30000;
 
   ng.module('SeaThree', [])
   .controller('TweetsCtrl', function ($scope, $http, $interval) {
@@ -45,7 +45,7 @@
       username: 'nate_smith',
       src:'en',
       tgt:'es',
-      twwets: []
+      tweets: []
     }];
 
     findUser = function (users, username) {
@@ -79,6 +79,7 @@
     });
 
     // Start polling.
+    fetch();
     $interval(fetch, FETCHINTERVAL);
   })
   .controller('LanguageCtrl', function ($scope) {

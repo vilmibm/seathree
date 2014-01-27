@@ -64,7 +64,25 @@
                     </div>
                     <div class="tweetColumn">
                         <div class="tweet" ng-repeat="tweet in list.tweets">
-                            {{tweet.displayname}}: {{tweet.translated}}
+                            <div class="userInfo">
+                                <span class="displayname">
+                                    <a href="https:/twitter.com/{{tweet.username}}">
+                                        {{tweet.displayname}}
+                                    </a>
+                                </span>
+                                &nbsp;&nbsp;
+                                <span class="username">
+                                    (@{{tweet.username}})
+                                </span>
+                            </div>
+                            <div class="avatar">
+                                <img ng-src="http://placekitten.com/48/48"/>
+                                <div class="buttons">
+                                    <button>♻</button>
+                                    <button>⚯</button>
+                                </div>
+                            </div>
+                            <div class="text"> {{tweet.translated}} </div>
                         </div>
                     </div>
                 </div>
