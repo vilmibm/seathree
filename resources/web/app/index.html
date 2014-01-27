@@ -48,14 +48,16 @@
 
             <div id="listListing">
                 <ul>
-                    <li ng-repeat="list in lists" ng-click="toggleListAt($index)">
+                    <li ng-repeat="list in lists"
+                        ng-click="toggleListAt($index)"
+                        ng-class="{selected: list.selected}">
                         {{list.name}}
                     </li>
                 </ul>
             </div>
 
             <div id="listColumns">
-                <div ng-repeat="list in lists | filter:isSelected">
+                <div class="listColumn" ng-repeat="list in lists | filter:isSelected">
                     <div class="columnTitle">
                         <span>{{list.name}}</span>
                         <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">+ User</a>

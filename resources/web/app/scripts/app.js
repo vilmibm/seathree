@@ -15,9 +15,9 @@
     };
 
     $scope.lists = [
-      new List('Mexico', ['GobiernoDF']),
-      new List('United States', ['nate_smith']),
-      new List('Organizations', []),
+      new List('Mexico', ['GobiernoDF', 'VertigoPolitico']),
+      new List('United States', ['nate_smith', 'bennnyv']),
+      new List('Organizations', ['VertigoPolitico']),
       new List('My List', [])
     ];
     $scope.lists.unshift(new List('All', _.chain($scope.lists)
@@ -30,6 +30,16 @@
       username: 'GobiernoDF',
       src: 'es',
       tgt: 'en',
+      tweets: []
+    }, {
+      username: 'VertigoPolitico',
+      src: 'es',
+      tgt: 'en',
+      tweets: []
+    }, {
+      username: 'bennnyv',
+      src: 'en',
+      tgt: 'es',
       tweets: []
     }, {
       username: 'nate_smith',
