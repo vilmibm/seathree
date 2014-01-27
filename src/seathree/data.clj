@@ -177,11 +177,11 @@
 (defn extract-tweet
   "Pulls only the keys we care about from a tweet from twitter"
   [tweet]
-  (let [username    (:screen_name (:user tweet))
-        displayname (:name (:user tweet))
-        tweet       (select-keys tweet [:text :id :created_at])]
-    (assoc tweet :username username)
-    (assoc tweet :displayname displayname)))
+  (let [user-info (:user tweet)
+        tweet     (select-keys tweet [:text :id :created_at])]
+    (merge tweet {:username          (:screen_name user-info)
+                  :displayname       (:name user-info)
+                  :profile-image-url (:profile_image_url user-info)})))
  
 (defn get-tweets-from-twitter
   "Ask the Twitter API for tweets for the given user-data map. Fetches
