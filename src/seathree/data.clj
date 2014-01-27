@@ -160,12 +160,10 @@
         result                (http-client/get translate-url http-opts)
         status-string         (to-string (:status result))]
     (condp match status-string
-      #"^[45]" (do (log/debug "Got " status-string "from google for " user-data)
-                   nil)
-      #"^2"    (do (log/debug "Got translation from google for " user-data)
-                   (assoc tweet :translated (-> result
-                                                extract-translation
-                                                (restore-sigils symbols))))
+      #"^[45]"  nil
+      #"^2"     (assoc tweet :translated (-> result
+                                             extract-translation
+                                             (restore-sigils symbols)))
       #"null"  nil)))
 
 (defn twitter-creds-from-cfg
@@ -196,10 +194,8 @@
         response      (twitter/statuses-user-timeline :oauth-creds creds :params params)
         status-string (to-string (:code (:status response)))]
     (condp match status-string
-      #"^[45]" (do (log/debug "Got " status-string "from twitter for " user-data)
-                   nil)
-      #"^2"    (do (log/debug "Got tweets from twitter for " user-data)
-                   (map extract-tweet (:body response))))))
+      #"^[45]" nil
+      #"^2"    (map extract-tweet (:body response)))))
 
 (defn get-tweets-from-cache
   "Pull out and return all tweet data for the requested user
