@@ -67,9 +67,11 @@
                         <div class="tweet" ng-repeat="tweet in list.tweets">
                             <div class="userInfo">
                                 <span class="displayname">
-                                    <a href="https:/twitter.com/{{tweet.username}}">
-                                        {{tweet.displayname}}
-                                    </a>
+                                    <strong>
+                                        <a href="https:/twitter.com/{{tweet.username}}">
+                                            {{tweet.displayname}}
+                                        </a>
+                                    </strong>
                                 </span>
                                 &nbsp;&nbsp;
                                 <span class="username">
@@ -77,7 +79,7 @@
                                 </span>
                             </div>
                             <div class="avatar">
-                                <img ng-src="http://placekitten.com/48/48"/>
+                                <img ng-src="{{tweet.profile_image_url}}"/>
                                 <div class="buttons">
                                     <button>♻</button>
                                     <button>⚯</button>

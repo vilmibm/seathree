@@ -106,7 +106,7 @@
     "
     [c]
     (format "XZ%d" c))
-  
+
 (defn mark-sigils
     "Replace special forms within a tweet with ordered sigils so
     they can be restored later. For example,
@@ -181,8 +181,8 @@
         tweet     (select-keys tweet [:text :id :created_at])]
     (merge tweet {:username          (:screen_name user-info)
                   :displayname       (:name user-info)
-                  :profile-image-url (:profile_image_url user-info)})))
- 
+                  :profile_image_url (:profile_image_url user-info)})))
+
 (defn get-tweets-from-twitter
   "Ask the Twitter API for tweets for the given user-data map. Fetches
    up until last-tweet-id if present; if nil, fetches last 20 tweets."
@@ -211,7 +211,7 @@
         last-id (:id (redis cfg #(car/lindex tkey 0)))
         tweets  (if last-id (filter #(< last-id (:id %)) tweets) tweets)]
     (redis cfg #(apply (partial car/lpush tkey) (reverse tweets)))))
-    
+
 (defn refresh-tweets!
   "Actually ask for new tweets from twitter for the given user map. If
    we see new tweets, translate and store them. Spawns a thread."
