@@ -29,20 +29,8 @@
     </head>
     <body ng-app="SeaThree">
         <div id="header">
-            <div id="headerLeft" ng-controller="LanguageCtrl">
-                <select>
-                    <option selected>English</option>
-                    <option>Spanish</option>
-                </select>
-                <p>
-                <a href="/about.html">About</a>
-                </p>
-            </div>
-            <div id="headerMain">
-                <h1>SeaThree</h1>
-                <h2>Blurring International Borders, Online</h2>
-            </div>
-
+            <h1>SeaThree</h1>
+            <h2>Blurring International Borders, Online</h2>
         </div>
 
         <div id="main" ng-controller="TweetsCtrl">
@@ -55,6 +43,13 @@
                         {{list.name}}
                     </li>
                 </ul>
+                <select>
+                    <option selected>English</option>
+                    <option>Spanish</option>
+                </select>
+                <p>
+                <a href="/about.html">About</a>
+                </p>
             </div>
 
             <div id="listColumns">
