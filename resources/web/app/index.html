@@ -25,21 +25,22 @@
         <script src="scripts/app.js"></script>
 
         <link rel="stylesheet" href="styles/seathree.css" />
+        <link href="http://fonts.googleapis.com/css?family=Duru+Sans" rel="stylesheet" type="text/css">
     </head>
     <body ng-app="SeaThree">
         <div id="header">
-
-            <div>
-                <h1>SeaThree</h1>
-                <h2>Blurring the US and Mexico Border, Online</h2>
-            </div>
-
-            <div ng-controller="LanguageCtrl">
+            <div id="headerLeft" ng-controller="LanguageCtrl">
                 <select>
                     <option selected>English</option>
                     <option>Spanish</option>
                 </select>
+                <p>
                 <a href="/about.html">About</a>
+                </p>
+            </div>
+            <div id="headerMain">
+                <h1>SeaThree</h1>
+                <h2>Blurring International Borders, Online</h2>
             </div>
 
         </div>

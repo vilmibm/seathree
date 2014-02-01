@@ -22,6 +22,34 @@ body {
     font-family: Arial;
 }
 
+div#header {
+    width: 100%;
+    height:10em;
+    font-family:'Duru Sans', sans;
+}
+
+div#headerMain {
+    width:80%;
+    height:100%;
+    text-align:center;
+}
+
+div#headerMain h2 {
+    font-style:oblique;
+    font-size:120%;
+}
+
+div#headerLeft {
+    float:left;
+    height:100%;
+    width:20%;
+}
+
+div#headerLeft a {
+    font-weight:bold;
+}
+
+
 #listListing {
 
     float:left;
