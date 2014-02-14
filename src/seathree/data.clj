@@ -15,7 +15,7 @@
 ; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns seathree.data
-  (require [clojure.string       :as str              ]
+  (require [clojure.string       :as s                ]
            [cheshire.core        :as json             ]
            [clj-http.client      :as http-client      ]
            [clj-time.core        :as time             ]
@@ -53,7 +53,7 @@
 (defn gen-key'
   "Generates redis key based on a map of user data plus the type of key"
   [key-name user-data]
-  (str/join "_" [(name key-name) (:username user-data) (:src user-data) (:tgt user-data)]))
+  (s/join "_" [(name key-name) (:username user-data) (:src user-data) (:tgt user-data)]))
 
 (def gen-key (memoize gen-key'))
 (def refresh-key (partial gen-key :refresh))
@@ -130,7 +130,7 @@
         (if (empty? ss)
           [marked-text symbols]
           (recur (inc c)
-                 (str/replace marked-text (first ss) (mk-sigil c))
+                 (s/replace marked-text (first ss) (mk-sigil c))
                  (rest ss))))))
 
 (defn restore-sigils
@@ -145,7 +145,7 @@
       (if (empty? ss)
         restored-text
         (recur (inc c)
-               (str/replace restored-text (mk-sigil c) (first ss))
+               (s/replace restored-text (mk-sigil c) (first ss))
                (rest ss)))))
 
 (defn translate
@@ -173,12 +173,56 @@
     (apply oauth/make-oauth-creds (map #(% creds) [:consumer-key :consumer-secret
                                                    :access-token :access-token-secret]))))
 
+(defn hash-to-anchor
+  "Given a hashtag entity, return a tuple of \"thing to replace\" and
+  a string of html for a single anchortag linking to that thing."
+  [hashtag]
+  (let [tag-text (:text hashtag)]
+    [(format "#%s" tag-text)
+     (format "<a href=\"https://twitter.com/search?q=%%23%s&src=hash\">#%s</a>"
+             tag-text tag-text)]))
+
+(defn at-to-anchor
+  "Given an at mention entity, return a tuple of \"thing to replace\"
+  and a string of html for a single anchor tag linking to that thing."
+  [at]
+  (let [tag-text (:screen_name at)]
+    [(format "@%s" tag-text)
+     (format "<a href=\"https://twitter.com/%s\">@%s</a>" tag-text tag-text)]))
+
+(defn url-to-anchor
+  "Given a url entity, return a tuple of the original twitter url and
+  a string of html that represents a single anchor tag with the original
+  url src and the truncated display url."
+  [url]
+  (let [url-src      (:expanded_url url)
+        original-url (:url url)
+        display-url  (:display_url url)]
+    [original-url
+     (format "<a href=\"%s\">%s</a>" url-src display-url)]))
+
+(defn linkify-text
+  "Given some text with potential @mentions, #tags or URLs, prepare
+   some HTML that links to the appropriate entities."
+  [text entities]
+  (let [hashtags       (map hash-to-anchor (:hashtags entities))
+        ats            (map at-to-anchor   (:user_mentions entities))
+        urls           (map url-to-anchor  (:urls entities))
+        replacements   (concat hashtags ats urls)]
+    (loop [t text rs replacements]
+      (if (empty? rs)
+        t
+        ;; TODO there is a minor bug; if somemone mis-capitalizes a
+        ;; screen_name (say, @Amazon when actual screen name is
+        ;; amazon) the replacement won't happen.
+        (recur (apply (partial s/replace t) (first rs)) (rest rs))))))
 
 (defn extract-tweet
   "Pulls only the keys we care about from a tweet from twitter"
   [tweet]
   (let [user-info (:user tweet)
-        tweet     (select-keys tweet [:text :id :created_at])]
+        linked_html (linkify-text (:text tweet) (:entities tweet))
+        tweet     (select-keys tweet [:text :id :created_at :entities])]
     (merge tweet {:username          (:screen_name user-info)
                   :displayname       (:name user-info)
                   :profile_image_url (:profile_image_url user-info)})))
