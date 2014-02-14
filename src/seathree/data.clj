@@ -221,9 +221,10 @@
   "Pulls only the keys we care about from a tweet from twitter"
   [tweet]
   (let [user-info (:user tweet)
-        linked_html (linkify-text (:text tweet) (:entities tweet))
-        tweet     (select-keys tweet [:text :id :created_at :entities])]
+        linked-html (linkify-text (:text tweet) (:entities tweet))
+        tweet     (select-keys tweet [:text :id :created_at])]
     (merge tweet {:username          (:screen_name user-info)
+                  :linked_html       linked-html
                   :displayname       (:name user-info)
                   :profile_image_url (:profile_image_url user-info)})))
 
