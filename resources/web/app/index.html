@@ -22,6 +22,7 @@
         <title>Seathree</title>
         <script src="bower_components/underscore/underscore-min.js"></script>
         <script src="bower_components/angular/angular.min.js"></script>
+        <script src="bower_components/angular-sanitize/angular-sanitize.min.js"></script>
         <script src="scripts/app.js"></script>
 
         <link rel="stylesheet" href="styles/seathree.css" />
@@ -80,7 +81,7 @@
                                     <button>⚯</button>
                                 </div>
                             </div>
-                            <div class="text"> {{tweet.translated}} </div>
+                            <div class="text" ng-bind-html="tweet.linked_html"></div>
                         </div>
                     </div>
                 </div>

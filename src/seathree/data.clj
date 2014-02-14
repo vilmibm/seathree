@@ -148,31 +148,6 @@
                (s/replace restored-text (mk-sigil c) (first ss))
                (rest ss)))))
 
-(defn translate
-  "Given a user-data map and a single tweet's text, make a GET request
-   to the google translate API."
-  [cfg user-data tweet]
-  (let [key                   (:key (:google cfg))
-        src                   (:src user-data)
-        tgt                   (:tgt user-data)
-        [marked-text symbols] (mark-sigils (:text tweet))
-        http-opts             {:query-params {"key" key "source" src "target" tgt "q" marked-text}}
-        result                (http-client/get translate-url http-opts)
-        status-string         (to-string (:status result))]
-    (condp match status-string
-      #"^[45]"  nil
-      #"^2"     (assoc tweet :translated (-> result
-                                             extract-translation
-                                             (restore-sigils symbols)))
-      #"null"  nil)))
-
-(defn twitter-creds-from-cfg
-  "Given a seathree config map, produce twitter oauth credentials."
-  [cfg]
-  (let [creds (:oauth (:twitter cfg))]
-    (apply oauth/make-oauth-creds (map #(% creds) [:consumer-key :consumer-secret
-                                                   :access-token :access-token-secret]))))
-
 (defn hash-to-anchor
   "Given a hashtag entity, return a tuple of \"thing to replace\" and
   a string of html for a single anchortag linking to that thing."
@@ -217,14 +192,40 @@
         ;; amazon) the replacement won't happen.
         (recur (apply (partial s/replace t) (first rs)) (rest rs))))))
 
+(defn translate
+  "Given a user-data map and a single tweet's text, make a GET request
+   to the google translate API."
+  [cfg user-data tweet]
+  (let [key                   (:key (:google cfg))
+        src                   (:src user-data)
+        tgt                   (:tgt user-data)
+        [marked-text symbols] (mark-sigils (:text tweet))
+        http-opts             {:query-params {"key" key "source" src "target" tgt "q" marked-text}}
+        result                (http-client/get translate-url http-opts)
+        status-string         (to-string (:status result))]
+    (condp match status-string
+      #"^[45]"  nil
+      #"^2"     (let [translated-text (-> result
+                                          extract-translation
+                                          (restore-sigils symbols))]
+                  (assoc tweet
+                    :translated translated-text
+                    :linked_html (linkify-text translated-text (:entities tweet))))
+      #"null"  nil)))
+
+(defn twitter-creds-from-cfg
+  "Given a seathree config map, produce twitter oauth credentials."
+  [cfg]
+  (let [creds (:oauth (:twitter cfg))]
+    (apply oauth/make-oauth-creds (map #(% creds) [:consumer-key :consumer-secret
+                                                   :access-token :access-token-secret]))))
+
 (defn extract-tweet
   "Pulls only the keys we care about from a tweet from twitter"
   [tweet]
   (let [user-info (:user tweet)
-        linked-html (linkify-text (:text tweet) (:entities tweet))
-        tweet     (select-keys tweet [:text :id :created_at])]
+        tweet     (select-keys tweet [:text :id :created_at :entities])]
     (merge tweet {:username          (:screen_name user-info)
-                  :linked_html       linked-html
                   :displayname       (:name user-info)
                   :profile_image_url (:profile_image_url user-info)})))
 

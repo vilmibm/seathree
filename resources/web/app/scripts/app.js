@@ -2,7 +2,7 @@
   var SEATHREEURL   = 'http://localhost:8888/tweets-for-many',
       FETCHINTERVAL = 30000;
 
-  ng.module('SeaThree', [])
+  ng.module('SeaThree', ['ngSanitize'])
   .controller('TweetsCtrl', function ($scope, $http, $interval) {
     var findUser,
         List,
