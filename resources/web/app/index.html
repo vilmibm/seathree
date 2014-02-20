@@ -57,7 +57,9 @@
                 <div class="listColumn" ng-repeat="list in lists | filter:isSelected">
                     <div class="columnTitle">
                         <span>{{list.name}}</span>
-                        <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">+ User</a>
+                        <div style="text-align:right;float:right">
+                          <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">add user</a>
+                        </div>
                     </div>
                     <div class="tweetColumn">
                         <div class="tweet" ng-repeat="tweet in list.tweets">
