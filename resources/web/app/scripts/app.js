@@ -72,7 +72,7 @@
     $scope.addUserAt = function (index) {
       var list;
       list = $scope.lists[index];
-      console.log('Adding user');
+      $scope.addUserModalShown = true;
     };
 
     fetch = function () {
@@ -97,6 +97,37 @@
     // Start polling.
     fetch();
     $interval(fetch, FETCHINTERVAL);
+  })
+  .controller('AddUserCtrl', function ($scope) {
+    $scope.langs = [{code:'en', display:'English'},
+                    {code:'es', display:'Spanish'}];
+    $scope.revlangs = _($scope.langs).clone().reverse();
+    $scope.addUser = function () {
+      console.log('HI')
+      console.log($scope.username, $scope.src, $scope.tgt);
+    };
+  })
+  .directive('modal', function() {
+    return {
+      restrict: 'E',
+      scope: {
+        show: '='
+      },
+      replace: true,
+      transclude: true,
+      link: function (scope, element, attrs) {
+        scope.hideModal = function () {
+          scope.show = false;
+        };
+      },
+      template:
+      '<div class="ng-modal" ng-show="show">'
+        + '<div class="ng-modal-overlay" ng-click="hideModal()"></div>'
+        + '<div class="ng-modal-dialog">'
+        + '<div class="ng-modal-close" ng-click="hideModal()">×</div>'
+          + '<div class="ng-modal-dialog-content" ng-transclude></div>'
+        + '</div></div>'
+    };
   })
   .controller('LanguageCtrl', function ($scope) {
     // TODO

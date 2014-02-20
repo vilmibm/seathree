@@ -1,94 +1,116 @@
 <!DOCTYPE html>
 <!--
- SeaThree, Realtime Twitter Translations
- Copyright (C) 2014 Nathaniel Smith and Benjamin Valentine
+    SeaThree, Realtime Twitter Translations
+    Copyright (C) 2014 Nathaniel Smith and Benjamin Valentine
 
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU Affero General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU Affero General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with this program.  If not, see <http://www.gnu.org/licenses/>.
--->
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Seathree</title>
-        <script src="bower_components/underscore/underscore-min.js"></script>
-        <script src="bower_components/angular/angular.min.js"></script>
-        <script src="bower_components/angular-sanitize/angular-sanitize.min.js"></script>
-        <script src="scripts/app.js"></script>
+  <head>
+    <meta charset="UTF-8">
+    <title>Seathree</title>
+    <script src="bower_components/underscore/underscore-min.js"></script>
+    <script src="bower_components/angular/angular.min.js"></script>
+    <script src="bower_components/angular-sanitize/angular-sanitize.min.js"></script>
+    <script src="scripts/app.js"></script>
 
-        <link rel="stylesheet" href="styles/seathree.css" />
-        <link href="http://fonts.googleapis.com/css?family=Duru+Sans" rel="stylesheet" type="text/css">
-    </head>
-    <body ng-app="SeaThree">
-        <div id="header">
-            <h1>SeaThree</h1>
-            <h2>Blurring International Borders, Online</h2>
-        </div>
+    <link rel="stylesheet" href="styles/seathree.css" />
+    <link rel="stylesheet" href="styles/ng-modal.css" />
+    <link href="http://fonts.googleapis.com/css?family=Duru+Sans" rel="stylesheet" type="text/css">
+  </head>
+  <body ng-app="SeaThree">
+    <div id="header">
+      <h1>SeaThree</h1>
+      <h2>Blurring International Borders, Online</h2>
+    </div>
 
-        <div id="main" ng-controller="TweetsCtrl">
+    <div id="main" ng-controller="TweetsCtrl">
 
-            <div id="listListing">
-                <ul>
-                    <li ng-repeat="list in lists"
-                        ng-click="toggleListAt($index)"
-                        ng-class="{selected: list.selected}">
-                        {{list.name}}
-                    </li>
-                </ul>
-                <select>
-                    <option selected>English</option>
-                    <option>Spanish</option>
-                </select>
-                <p>
-                <a href="/about.html">About</a>
-                </p>
+      <div id="listListing">
+        <ul>
+          <li ng-repeat="list in lists"
+              ng-click="toggleListAt($index)"
+              ng-class="{selected: list.selected}">
+            {{list.name}}
+          </li>
+        </ul>
+        <select>
+          <option selected>English</option>
+          <option>Spanish</option>
+        </select>
+        <p>
+          <a href="/about.html">About</a>
+        </p>
+      </div>
+
+      <div id="listColumns">
+        <modal show="addUserModalShown">
+          <h2>Add a new user</h2>
+          <div ng-controller="AddUserCtrl">
+            <p>
+              I'd like to add
+              <input ng-model="username" type="text" placeholder="@someone">
+              <br><br>
+              and translate their tweets from
+              <select ng-model="src"
+                   ng-options="lang.code as lang.display for lang in langs">
+                   </select>
+              to
+              <select ng-model="tgt"
+                      ng-options="lang.code as lang.display for lang in revlangs">
+              </select>
+            </p>
+            <button ng-click="addUser()">Add</button>
+          </div>
+        </modal>
+        <div class="listColumn" ng-repeat="list in lists | filter:isSelected">
+          <div class="columnTitle">
+            <span>{{list.name}}</span>
+            <div style="text-align:right;float:right">
+              <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">add user</a>
             </div>
-
-            <div id="listColumns">
-                <div class="listColumn" ng-repeat="list in lists | filter:isSelected">
-                    <div class="columnTitle">
-                        <span>{{list.name}}</span>
-                        <div style="text-align:right;float:right">
-                          <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">add user</a>
-                        </div>
-                    </div>
-                    <div class="tweetColumn">
-                        <div class="tweet" ng-repeat="tweet in list.tweets">
-                            <div class="userInfo">
-                                <span class="displayname">
-                                    <strong>
-                                        <a href="https:/twitter.com/{{tweet.username}}">
-                                            {{tweet.displayname}}
-                                        </a>
-                                    </strong>
-                                </span>
-                                &nbsp;&nbsp;
-                                <span class="username">
-                                    (@{{tweet.username}})
-                                </span>
-                            </div>
-                            <div class="avatar">
-                                <img ng-src="{{tweet.profile_image_url}}"/>
-                                <div class="buttons">
-                                    <button>♻</button>
-                                    <button>⚯</button>
-                                </div>
-                            </div>
-                            <div class="text" ng-bind-html="tweet.linked_html"></div>
-                        </div>
-                    </div>
+          </div>
+          <div class="tweetColumn">
+            <div class="tweet" ng-repeat="tweet in list.tweets">
+              <div class="userInfo">
+                <span class="displayname">
+                  <strong>
+                    <a href="https:/twitter.com/{{tweet.username}}">
+                      {{tweet.displayname}}
+                    </a>
+                  </strong>
+                </span>
+                &nbsp;&nbsp;
+                <span class="username">
+                  (@{{tweet.username}})
+                </span>
+              </div>
+              <div class="avatar">
+                <img ng-src="{{tweet.profile_image_url}}"/>
+                <div class="buttons">
+                  <a href="#">♻</a>
+                  <a href="#">⚯</a>
                 </div>
+              </div>
+              <div class="text" ng-bind-html="tweet.linked_html"></div>
             </div>
+          </div>
         </div>
+      </div>
 
-    </body>
+    </div>
+
+
+  </body>
 </html>
