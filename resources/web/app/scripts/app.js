@@ -116,6 +116,7 @@
       $scope.mylist.usernames.push($scope.username);
       $scope.lists[0].usernames.push($scope.username)
       // TweetsCtrl >> Modal >> AddUserCtrl
+      $scope.username = '';
       $scope.$parent.$parent.addUserModalShown = false;
     };
   })
