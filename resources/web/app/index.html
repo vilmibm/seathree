@@ -40,7 +40,7 @@
       <div id="listListing">
         <ul>
           <li ng-repeat="list in lists"
-              ng-click="toggleListAt($index)"
+              ng-click="toggleList(list)"
               ng-class="{selected: list.selected}">
             {{list.name}}
           </li>
@@ -68,7 +68,7 @@
                    </select>
               to
               <select ng-model="tgt"
-                      ng-options="lang.code as lang.display for lang in revlangs">
+                      ng-options="lang.code as lang.display for lang in langs">
               </select>
             </p>
             <button ng-click="addUser()">Add</button>
@@ -78,7 +78,7 @@
           <div class="columnTitle">
             <span>{{list.name}}</span>
             <div style="text-align:right;float:right">
-              <a ng-show="list.name == 'My List'" ng-click="addUserAt($index)">add user</a>
+              <a ng-show="list.name == 'My List'" ng-click="addUserAt(list)">add user</a>
             </div>
           </div>
           <div class="tweetColumn">

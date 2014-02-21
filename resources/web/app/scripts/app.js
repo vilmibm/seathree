@@ -65,13 +65,19 @@
 
     $scope.users = defaultUsers;
 
+    $scope.addUserModalShown = false;
+
     $scope.isSelected = function (list) {return list.selected;};
-    $scope.toggleListAt = function (index) {
-      $scope.lists[index].selected = !$scope.lists[index].selected;
+    $scope.toggleList = function (list) {
+      list.selected = !list.selected;
     };
-    $scope.addUserAt = function (index) {
-      var list;
-      list = $scope.lists[index];
+    $scope.addUserAt = function (list) {
+      // TODO nasty hack; since there is now only one custom list we
+      // can just save a reference in scope. When there are multiple
+      // custom lists, the list being added to will have to be exposed
+      // to the modal. It might be fine to just have a "currentlist"
+      // model but that gives me the willies
+      $scope.mylist = list;
       $scope.addUserModalShown = true;
     };
 
@@ -101,10 +107,16 @@
   .controller('AddUserCtrl', function ($scope) {
     $scope.langs = [{code:'en', display:'English'},
                     {code:'es', display:'Spanish'}];
-    $scope.revlangs = _($scope.langs).clone().reverse();
     $scope.addUser = function () {
-      console.log('HI')
-      console.log($scope.username, $scope.src, $scope.tgt);
+      $scope.users.push({
+        username: $scope.username,
+        src: $scope.src,
+        tgt: $scope.tgt
+      });
+      $scope.mylist.usernames.push($scope.username);
+      $scope.lists[0].usernames.push($scope.username)
+      // TweetsCtrl >> Modal >> AddUserCtrl
+      $scope.$parent.$parent.addUserModalShown = false;
     };
   })
   .directive('modal', function() {
