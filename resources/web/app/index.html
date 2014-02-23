@@ -65,10 +65,12 @@
               and translate their tweets from
               <select ng-model="src"
                    ng-options="lang.code as lang.display for lang in langs">
-                   </select>
+                <option value="">...</option>
+              </select>
               to
               <select ng-model="tgt"
                       ng-options="lang.code as lang.display for lang in langs">
+                <option value="">...</option>
               </select>
             </p>
             <button ng-click="addUser()">Add</button>
