@@ -57,19 +57,26 @@
                                 .value()));
 
   ng.module('SeaThree', ['ngSanitize'])
-  .controller('TweetsCtrl', function ($scope, $http, $interval) {
+  .controller('TweetsCtrl', function ($scope, $http, $interval, $window) {
     var fetch,
-        addUserAt;
+        addUserAt,
+        lists,
+        users;
 
-    $scope.lists = defaultLists;
+    // persist
+    lists = JSON.parse($window.localStorage.getItem('lists'));
+    $scope.lists = lists || defaultLists;
 
-    $scope.users = defaultUsers;
+    // persist
+    users = JSON.parse($window.localStorage.getItem('users'));
+    $scope.users = users || defaultUsers;
 
     $scope.addUserModalShown = false;
 
     $scope.isSelected = function (list) {return list.selected;};
     $scope.toggleList = function (list) {
       list.selected = !list.selected;
+      $window.localStorage.setItem('lists', JSON.stringify($scope.lists));
     };
     $scope.addUserAt = function (list) {
       // TODO nasty hack; since there is now only one custom list we
@@ -91,6 +98,8 @@
     };
 
     $scope.$watch('users', function () {
+      $window.localStorage.setItem('users', JSON.stringify($scope.users));
+
       // When users is updated, we must update the lists.
       _($scope.lists).each(function (list) {
         var tweets = _(list.usernames).map(function (username) {
@@ -98,6 +107,7 @@
         });
         list.tweets = _(_(tweets).flatten()).sortBy('id').reverse();
       });
+      $window.localStorage.setItem('lists', JSON.stringify($scope.lists));
     });
 
     // Start polling.
@@ -118,6 +128,7 @@
       // TweetsCtrl >> Modal >> AddUserCtrl
       $scope.username = '';
       $scope.$parent.$parent.addUserModalShown = false;
+      $window.localStorage.setItem('lists', JSON.stringify($scope.lists));
     };
   })
   .directive('modal', function() {
