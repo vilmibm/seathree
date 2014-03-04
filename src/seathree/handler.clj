@@ -16,58 +16,52 @@
 
 (ns seathree.handler
   (:gen-class)
-  (:require [clojure.tools.nrepl.server :as nrsrv         ]
-            [compojure.core             :refer :all       ]
-            [cheshire.core              :as json          ]
-            [ring.adapter.jetty         :refer (run-jetty)]
-            [ring.middleware.gzip       :refer :all       ]
-            [ring.middleware.json       :refer :all       ]
-            [ring.middleware.params     :refer :all       ]
-            [ring.middleware.cors       :refer [wrap-cors]]
-            [ring.util.response         :refer [response] ]
-            [taoensso.timbre            :as log           ]
-            [seathree.config            :as cfg           ]
-            [seathree.data              :as data          ]
-            [seathree.routes                              ]))
+  (:require [clojure.tools.nrepl.server :as nrsrv           ]
+            [compojure.core             :refer :all         ]
+            [cheshire.core              :as json            ]
+            [liberator.core             :refer [defresource]]
+            [liberator.dev              :refer [wrap-trace] ]
+            [ring.adapter.jetty         :refer (run-jetty)  ]
+            [ring.middleware.gzip       :refer :all         ]
+            [ring.middleware.json       :refer :all         ]
+            [ring.middleware.params     :refer :all         ]
+            [ring.middleware.cors       :refer [wrap-cors]  ]
+            [ring.util.response         :refer [response]   ]
+            [taoensso.timbre            :as log             ]
+            [seathree.config            :as cfg             ]
+            [seathree.data              :as data            ]
+            [seathree.routes                                ]))
 
-(declare config)
 (def default-host "localhost")
 (def default-port 8888)
 (def default-cfg-file "resources/secrets.clj")
 (def default-log-file "/tmp/C3.log")
 
-(defn process-params [params]
-  (json/parse-string (get params "data") true))
+(def lang-re #"^en|es$") ; TODO add languages
 
-(defroutes router
-  ;; Expects ?data="{\"username\":\"foo\",...}"
-  (GET "/tweets-for-user" [:as {p :params}]
-       (log/info "request:" p)
-       (response (seathree.routes/tweets config (process-params p))))
-                                                            
-  ;; Expects ?data="[{\"username\":\"foo\",...},...]"
-  (GET "/tweets-for-many" [:as {p :params}]
-       (log/info "request:" p)
-       (response (map (partial seathree.routes/tweets config) (process-params p))))) 
+(defn guarded-int [string]
+  (if (nil? string) nil (Integer. string)))
 
-(def app
-  (-> router
-      (wrap-cors
-       :access-control-allow-origin #".*")
-      (wrap-params)
-      (wrap-json-response)
-      (wrap-gzip)))
+(defresource tweets-resource [cfg username src tgt & [since-id]]
+  :allowed-methods [:get]
+  :available-media-types ["application/json"]
+  :malformed? (fn [_] (not (every? (partial re-find lang-re) [src tgt])))
+  :handle-ok (fn [_] "OKAY"))
+
+(defn web-app [config]
+  (routes
+   (GET "/tweets/:username/:src/:tgt"
+        [username src tgt] (tweets-resource config username src tgt))
+   (GET "/tweets/:username/:src/:tgt/:since-id"
+        [username src tgt since-id] (tweets-resource config username src tgt (guarded-int since-id)))
+   ; TODO static routes
+))
 
 (defn get-arg
   "Pull args from maps of the form {\":cli-keyword-arg\" \"value\"
    with optional default"
   [args arg & [default]]
   (or (get args (format "%s" arg)) default))
-
-(defn guarded-int [string]
-  (if (nil? string)
-    nil
-    (Integer. string)))
 
 (defn -main
   [& args]
@@ -81,17 +75,17 @@
     (log/set-config! [:timestamp-pattern] "yyyy-MM-dd HH:mm:ss ZZ")
     (log/set-config! [:appenders :spit :enabled?] true)
     (log/set-config! [:shared-appender-config :spit-filename] log-file)
-    
-    (log/info "STARTUP: Reading config")
-    (def config (cfg/get-cfg cfg-file))
 
-    (log/info "STARTUP: starting jetty on" host "port" port)
-    (run-jetty app {:port port :host host :join? false})
+    (let [app (-> (web-app (cfg/get-cfg cfg-file))
+                  (wrap-trace :header)
+                  (wrap-cors
+                   :access-control-allow-origin #".*")
+                  (wrap-params)
+                  (wrap-gzip))]
+      (log/info "STARTUP: starting jetty on" host "port" port)
+      (run-jetty app {:port port :host host :join? false}))
 
     (if nrepl-port
       (do
         (log/info "STARTUP: starting nrepl")
         (def server (nrsrv/start-server :port nrepl-port))))))
-
-
-           
