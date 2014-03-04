@@ -18,6 +18,7 @@
   (:gen-class)
   (:require [clojure.tools.nrepl.server :as nrsrv           ]
             [compojure.core             :refer :all         ]
+            [compojure.route            :as route           ]
             [cheshire.core              :as json            ]
             [liberator.core             :refer [defresource]]
             [liberator.dev              :refer [wrap-trace] ]
@@ -25,7 +26,6 @@
             [ring.middleware.gzip       :refer :all         ]
             [ring.middleware.json       :refer :all         ]
             [ring.middleware.params     :refer :all         ]
-            [ring.middleware.cors       :refer [wrap-cors]  ]
             [ring.util.response         :refer [response]   ]
             [taoensso.timbre            :as log             ]
             [seathree.config            :as cfg             ]
@@ -54,6 +54,7 @@
         [username src tgt] (tweets-resource config username src tgt))
    (GET "/tweets/:username/:src/:tgt/:since-id"
         [username src tgt since-id] (tweets-resource config username src tgt (guarded-int since-id)))
+   (route/resources "/" {:root "web/app"})
    ; TODO static routes
 ))
 
@@ -78,8 +79,6 @@
 
     (let [app (-> (web-app (cfg/get-cfg cfg-file))
                   (wrap-trace :header)
-                  (wrap-cors
-                   :access-control-allow-origin #".*")
                   (wrap-params)
                   (wrap-gzip))]
       (log/info "STARTUP: starting jetty on" host "port" port)
