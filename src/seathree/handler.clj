@@ -37,7 +37,8 @@
 (def default-cfg-file "resources/secrets.clj")
 (def default-log-file "/tmp/C3.log")
 
-(def lang-re #"^en|es$") ; TODO add languages
+; English German French Spanish Polish Italian Russian Portuguese Dutch Romanian Ukrainian
+(def lang-re #"^en|de|fr|es|pl|it|ru|pt|nl|ro|uk$")
 
 (defn guarded-int [string]
   (if (nil? string) nil (Integer. string)))
