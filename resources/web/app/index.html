@@ -45,10 +45,10 @@
             {{list.name}}
           </li>
         </ul>
-        <select>
+        <!-- <select>
           <option selected>English</option>
           <option>Spanish</option>
-        </select>
+        </select> -->
         <p>
           <a href="/about.html">About</a>
         </p>
@@ -84,7 +84,11 @@
             </div>
           </div>
           <div class="tweetColumn">
-            <div class="tweet" ng-repeat="tweet in list.tweets">
+              <div class="newTweets"
+                   ng-show="list.newTweets.length > 0">
+                  <button ng-click="loadNewTweetsAt(list)">Load newer tweets...</button>
+              </div>
+            <div class="tweet" ng-repeat="tweet in list.visibleTweets">
               <div class="userInfo">
                 <span class="displayname">
                   <strong>

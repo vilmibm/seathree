@@ -29,8 +29,7 @@
             [ring.util.response         :refer [response]   ]
             [taoensso.timbre            :as log             ]
             [seathree.config            :as cfg             ]
-            [seathree.data              :as data            ]
-            [seathree.routes                                ]))
+            [seathree.data              :as data            ]))
 
 (def default-host "localhost")
 (def default-port 8888)
@@ -43,20 +42,25 @@
 (defn guarded-int [string]
   (if (nil? string) nil (Integer. string)))
 
+(defn guarded-long [string]
+  (if (nil? string) nil (Long. string)))
+
 (defresource tweets-resource [cfg username src tgt & [since-id]]
   :allowed-methods [:get]
   :available-media-types ["application/json"]
   :malformed? (fn [_] (not (every? (partial re-find lang-re) [src tgt])))
-  :handle-ok (fn [_] "OKAY"))
+  :handle-ok (fn [_] (let [user-data {:username username :src src :tgt tgt}
+                           tweets    (data/get-tweets-from-cache cfg user-data since-id)]
+                       (data/refresh-tweets! cfg user-data)
+                       tweets)))
 
 (defn web-app [config]
   (routes
    (GET "/tweets/:username/:src/:tgt"
         [username src tgt] (tweets-resource config username src tgt))
    (GET "/tweets/:username/:src/:tgt/:since-id"
-        [username src tgt since-id] (tweets-resource config username src tgt (guarded-int since-id)))
+        [username src tgt since-id] (tweets-resource config username src tgt (guarded-long since-id)))
    (route/resources "/" {:root "web/app"})
-   ; TODO static routes
 ))
 
 (defn get-arg

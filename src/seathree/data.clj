@@ -1,10 +1,4 @@
-; SeaThree, Realtime Twitter Translations
-; Copyright (C) 2014 Nathaniel Smith and Benjamin Valentine
-;
-; This program is free software: you can redistribute it and/or modify
-; it under the terms of the GNU Affero General Public License as published by
-; the Free Software Foundation, either version 3 of the License, or
-; (at your option) any later version.
+
 ;
 ; This program is distributed in the hope that it will be useful,
 ; but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,7 +19,7 @@
            [twitter.oauth        :as oauth            ]
            [twitter.api.restful  :as twitter          ]))
 
-(def stale (time/minutes 5))
+(def stale (time/minutes 1))
 (def translate-url "https://www.googleapis.com/language/translate/v2")
 
 (defn to-string [int] (format "%d" int))
@@ -227,6 +221,7 @@
         tweet     (select-keys tweet [:text :id :created_at :entities])]
     (merge tweet {:username          (:screen_name user-info)
                   :displayname       (:name user-info)
+                  :id_str            (format "%d" (:id tweet))
                   :profile_image_url (:profile_image_url user-info)})))
 
 (defn get-tweets-from-twitter
@@ -248,6 +243,8 @@
    map. Assocs tweet list with user data."
   [cfg user-data & [since-id]]
   (let [tweets (redis cfg #(car/lrange (tweets-key user-data) 0 -1))]
+    (log/debug since-id)
+    (log/debug (map :id tweets))
     (if since-id
       (take-while #(not (= (:id %) since-id)) tweets)
       tweets)))
